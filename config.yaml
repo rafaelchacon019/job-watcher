@@ -1,0 +1,79 @@
+# Configuracion inicial de job-watcher.
+# Ajusta estas listas a medida que definas mejor tu busqueda.
+
+revision:
+  intervalo_minutos: 60
+
+perfil:
+  palabras_clave_positivas:
+    - Angular
+    - TypeScript
+    - JavaScript
+    - .NET
+    - C#
+    - ASP.NET Core
+    - Node.js
+    - Django
+    - SQL Server
+    - PostgreSQL
+    - Shopify
+    - Liquid
+    - API REST
+    - JWT
+    - Git
+    - Junior
+    - Semi Senior
+    - Remoto
+    - Hibrido
+    - Bogota
+
+  tecnologias_prioridad_condicional:
+    nombres:
+      - Python
+      - PL/SQL
+    sumar_puntos_fuertes_si_menciona:
+      niveles_compatibles:
+        - Junior
+        - Entry Level
+        - Trainee
+        - Aprendiz
+        - Practicante
+      experiencia_baja:
+        maximo_anios: 3
+        frases_referencia:
+          - Sin experiencia previa
+          - 0-1 anios
+          - 1 anio
+          - 1-2 anios
+          - 2 anios
+          - 3 anios
+    bajar_puntaje_si_menciona:
+      niveles_no_prioritarios:
+        - Semi Senior
+        - Senior
+        - Lead
+        - Tech Lead
+        - Architect
+        - Arquitecto
+      experiencia_especifica_mayor_a_anios: 3
+    descartar_oferta_automaticamente: false
+
+  palabras_clave_negativas:
+    - Senior avanzado
+    - Lead
+    - Manager
+    - Arquitecto
+    - Presencial obligatorio
+    - Ingles nativo
+
+busqueda:
+  portales_objetivo:
+    - LinkedIn
+    - Computrabajo
+    - Elempleo
+    - Indeed
+    - Torre
+  ubicacion_preferida: Bogota
+  modalidades_preferidas:
+    - Remoto
+    - Hibrido

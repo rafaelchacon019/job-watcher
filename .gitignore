@@ -1,0 +1,21 @@
+# Entorno virtual de Python
+.venv/
+
+# Variables de entorno con datos sensibles
+.env
+
+# Cache de Python
+__pycache__/
+*.pyc
+
+# Bases de datos locales
+*.db
+data/*.db
+
+# Reportes generados
+output/*.csv
+output/*.xlsx
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db

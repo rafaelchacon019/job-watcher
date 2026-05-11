@@ -1,0 +1,6 @@
+python-dotenv
+beautifulsoup4
+pandas
+apscheduler
+pyyaml
+requests
