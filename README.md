@@ -102,6 +102,20 @@ Esta mejora ajusta la decodificacion de correos, clasifica cada resultado con
 `email_type` y prioriza links mas utiles. Sigue siendo una prueba manual: no
 esta conectada a `main.py`, no guarda en SQLite y no genera CSV.
 
+## Fase 2.6
+
+La Fase 2.6 permite probar scoring sobre correos reales ya parseados usando
+`scripts/test_email_scoring.py`. Todavia no esta conectada a `main.py`, no
+guarda en base de datos y no genera CSV.
+
+Para probar se requiere un `.env` local y cambiar temporalmente
+`email_settings.enabled` a `true`. Despues de probar se recomienda volverlo a
+`false`.
+
+```powershell
+python scripts/test_email_scoring.py
+```
+
 ## Instalacion local
 
 Crear el entorno virtual:

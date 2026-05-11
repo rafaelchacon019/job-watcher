@@ -6,7 +6,7 @@ guarda en SQLite y no calcula puntajes.
 
 import re
 import unicodedata
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -146,6 +146,20 @@ def _is_generic_alert_subject(subject):
     return any(phrase in normalized for phrase in phrases)
 
 
+def _is_generic_title(title):
+    """Detecta titulos temporales que conviene reemplazar si hay mejor dato."""
+    normalized = _normalize(title)
+    phrases = [
+        "alerta general de empleo",
+        "nuevas vacantes",
+        "nuevas ofertas",
+        "buscas empleo como",
+        "te buscan",
+        "empresas necesitan talento",
+    ]
+    return any(phrase in normalized for phrase in phrases)
+
+
 def guess_title_from_subject(subject):
     """Intenta usar el asunto como titulo temporal de la oferta."""
     cleaned = _compact_spaces(subject)
@@ -220,6 +234,38 @@ def guess_location(text):
             return label
 
     return "No detectada"
+
+
+def extract_job_info_from_link(link):
+    """Extrae datos simples desde un link sin hacer requests."""
+    decoded_link = unquote(str(link or ""))
+    normalized_link = _normalize(decoded_link)
+    info = {
+        "title": None,
+        "location": None,
+    }
+
+    match = re.search(
+        r"oferta-de-trabajo-de-([a-z0-9-]+?)-en-([a-z0-9-]+)",
+        normalized_link,
+    )
+    if match:
+        raw_title = match.group(1)
+        title_words = [
+            word.capitalize()
+            for word in raw_title.split("-")
+            if word and word not in {"a", "de", "del", "la", "el"}
+        ]
+        if title_words:
+            info["title"] = " ".join(title_words)
+
+        raw_location = match.group(2)
+        info["location"] = guess_location(raw_location.replace("-", " "))
+
+    if not info["location"]:
+        info["location"] = guess_location(normalized_link.replace("-", " "))
+
+    return info
 
 
 def _is_home_link(link):
@@ -328,6 +374,7 @@ def parse_email_to_jobs(email_data):
     email_type = classify_email(subject, sender, combined_text)
     links = extract_links_from_html(html_body)
     link = select_best_job_link(links, portal)
+    link_info = extract_job_info_from_link(link)
     description = combined_text[:500]
 
     if email_type == "application_update":
@@ -339,12 +386,19 @@ def parse_email_to_jobs(email_data):
         title = guess_title_from_subject(subject)
         company = guess_company_from_subject(subject)
 
+        if _is_generic_title(title) and link_info.get("title"):
+            title = link_info["title"]
+
+    location = guess_location(combined_text)
+    if location == "No detectada" and link_info.get("location"):
+        location = link_info["location"]
+
     return [
         {
             "title": title,
             "company": company,
             "portal": portal,
-            "location": guess_location(combined_text),
+            "location": location,
             "modality": guess_modality(combined_text),
             "description": description,
             "link": link,

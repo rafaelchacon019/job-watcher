@@ -15,9 +15,12 @@ def _job_text(job):
     """Une los campos principales que se usan para buscar coincidencias."""
     fields = [
         job.get("title", ""),
+        job.get("company", ""),
+        job.get("portal", ""),
         job.get("description", ""),
         job.get("location", ""),
         job.get("modality", ""),
+        job.get("link", ""),
     ]
     return " ".join(fields)
 
@@ -71,12 +74,86 @@ def _clamp_score(score, rules):
     return max(minimum, min(maximum, score))
 
 
+def _is_generic_alert_title(title):
+    """Detecta titulos que parecen alertas generales, no ofertas concretas."""
+    normalized_title = _normalize(title)
+    generic_phrases = [
+        "alerta general de empleo",
+        "nuevas vacantes",
+        "nuevas ofertas",
+        "te buscan para nuevos empleos",
+        "empresas necesitan talento",
+    ]
+
+    return any(phrase in normalized_title for phrase in generic_phrases)
+
+
+def _score_email_type(email_type, rules):
+    """Calcula ajuste por tipo de correo parseado."""
+    if email_type == "job_alert":
+        return 0, "Tipo de correo: alerta de empleo"
+    if email_type == "application_update":
+        return rules.get("tipo_application_update", -25), (
+            "Tipo de correo: seguimiento de postulacion"
+        )
+    if email_type == "generic_notification":
+        return rules.get("tipo_generic_notification", -35), (
+            "Tipo de correo: notificacion general"
+        )
+
+    return 0, ""
+
+
+def _score_link(link, rules):
+    """Premia links que parecen ir a una oferta concreta o a una lista util."""
+    normalized_link = _normalize(link)
+    concrete_patterns = [
+        "o_detail",
+        "oferta-de-trabajo-de",
+        "linkedin.com/jobs/view",
+        "jobs/view",
+    ]
+    list_patterns = [
+        "o_grid",
+        "jobs/search",
+        "search",
+        "ofertas-de-trabajo/?",
+        "q=",
+    ]
+
+    if any(pattern in normalized_link for pattern in concrete_patterns):
+        return rules.get("link_oferta_concreta", 15), (
+            "Link parece apuntar a una oferta concreta"
+        )
+    if any(pattern in normalized_link for pattern in list_patterns):
+        return rules.get("link_lista_ofertas", 3), (
+            "Link parece apuntar a una lista de ofertas"
+        )
+
+    return 0, ""
+
+
 def calculate_score(job, config):
     """Calcula el puntaje de una oferta y explica los motivos."""
     score = 0
     reasons = []
     rules = config.get("reglas_puntaje", {})
     text = _job_text(job)
+    email_type = job.get("email_type", "")
+
+    email_type_score, email_type_reason = _score_email_type(email_type, rules)
+    score += email_type_score
+    if email_type_reason:
+        reasons.append(email_type_reason)
+
+    if _is_generic_alert_title(job.get("title", "")):
+        score += rules.get("titulo_generico_alerta", -10)
+        reasons.append("Titulo generico de alerta")
+
+    link_score, link_reason = _score_link(job.get("link", ""), rules)
+    score += link_score
+    if link_reason:
+        reasons.append(link_reason)
 
     for technology in config.get("tecnologias_fuertes", []):
         if _contains_keyword(text, technology):
@@ -129,6 +206,10 @@ def calculate_score(job, config):
         if _contains_negative(text, negative_word):
             score += rules.get("palabra_negativa", 0)
             reasons.append(f"Resta por palabra negativa: {negative_word}")
+
+    if email_type == "application_update":
+        score = min(score, rules.get("max_application_update", 5))
+        reasons.append("Seguimiento de postulacion: no compite como oferta nueva")
 
     return {
         "score": _clamp_score(score, rules),
