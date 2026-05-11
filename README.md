@@ -51,6 +51,16 @@ nivel: solo suman puntos fuertes cuando la oferta tambien menciona un nivel
 compatible o experiencia baja. Si aparecen en ofertas de mayor seniority, no se
 priorizan por esas tecnologias.
 
+## Fase 2.1
+
+Esta fase solo deja preparada la configuracion para una lectura futura de
+correos de alertas laborales mediante IMAP. Todavia no se leen correos reales.
+
+`.env.example` es solo una plantilla. Cuando se use Gmail o IMAP, se debera
+crear un archivo local `.env` que no se sube a Git. Para Gmail puede requerirse
+IMAP habilitado y un metodo seguro de autenticacion, como una contrasena de
+aplicacion o mecanismo equivalente.
+
 ## Instalacion local
 
 Crear el entorno virtual:

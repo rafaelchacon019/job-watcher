@@ -3,6 +3,33 @@
 
 intervalo_revision_minutos: 60
 
+# Preparacion para una fase futura de lectura IMAP.
+# En Fase 2.1 queda apagado: no se leen correos reales todavia.
+email_settings:
+  enabled: false
+  days_back: 1
+  max_emails: 20
+  folders:
+    - INBOX
+  subject_keywords:
+    - empleo
+    - trabajo
+    - job alert
+    - alerta de empleo
+    - LinkedIn
+    - Computrabajo
+    - El Empleo
+  sender_keywords:
+    - linkedin
+    - computrabajo
+    - elempleo
+    - empleo
+    - jobs
+  ignored_keywords:
+    - publicidad
+    - promoción
+    - newsletter
+
 portales_objetivo:
   - LinkedIn
   - Computrabajo
