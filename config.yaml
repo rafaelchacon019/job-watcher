@@ -1,79 +1,84 @@
-# Configuracion inicial de job-watcher.
-# Ajusta estas listas a medida que definas mejor tu busqueda.
+# Configuracion de Fase 1 para job-watcher.
+# Esta fase usa datos locales de prueba, sin conectarse a correos ni portales.
 
-revision:
-  intervalo_minutos: 60
+intervalo_revision_minutos: 60
 
-perfil:
-  palabras_clave_positivas:
-    - Angular
-    - TypeScript
-    - JavaScript
-    - .NET
-    - C#
-    - ASP.NET Core
-    - Node.js
-    - Django
-    - SQL Server
-    - PostgreSQL
-    - Shopify
-    - Liquid
-    - API REST
-    - JWT
-    - Git
+portales_objetivo:
+  - LinkedIn
+  - Computrabajo
+  - Elempleo
+  - Indeed
+  - Torre
+
+ubicaciones_preferidas:
+  - Bogotá
+  - Colombia
+  - Remoto
+
+modalidades_preferidas:
+  - Remoto
+  - Híbrido
+
+niveles_preferidos:
+  - Junior
+  - Entry Level
+  - Trainee
+  - Aprendiz
+  - Practicante
+  - Semi Senior
+
+tecnologias_fuertes:
+  - Angular
+  - TypeScript
+  - JavaScript
+  - .NET
+  - C#
+  - ASP.NET Core
+  - Node.js
+  - SQL Server
+  - PostgreSQL
+  - Shopify
+  - Liquid
+  - API REST
+  - JWT
+  - Git
+
+tecnologias_condicionales:
+  nombres:
+    - Python
+    - PL/SQL
+  niveles_compatibles:
     - Junior
-    - Semi Senior
-    - Remoto
-    - Hibrido
-    - Bogota
-
-  tecnologias_prioridad_condicional:
-    nombres:
-      - Python
-      - PL/SQL
-    sumar_puntos_fuertes_si_menciona:
-      niveles_compatibles:
-        - Junior
-        - Entry Level
-        - Trainee
-        - Aprendiz
-        - Practicante
-      experiencia_baja:
-        maximo_anios: 3
-        frases_referencia:
-          - Sin experiencia previa
-          - 0-1 anios
-          - 1 anio
-          - 1-2 anios
-          - 2 anios
-          - 3 anios
-    bajar_puntaje_si_menciona:
-      niveles_no_prioritarios:
-        - Semi Senior
-        - Senior
-        - Lead
-        - Tech Lead
-        - Architect
-        - Arquitecto
-      experiencia_especifica_mayor_a_anios: 3
-    descartar_oferta_automaticamente: false
-
-  palabras_clave_negativas:
-    - Senior avanzado
+    - Entry Level
+    - Trainee
+    - Aprendiz
+    - Practicante
+  niveles_no_prioritarios:
+    - Semi Senior alto
+    - Senior
     - Lead
-    - Manager
-    - Arquitecto
-    - Presencial obligatorio
-    - Ingles nativo
+    - Tech Lead
+    - Architect
+  experiencia_baja_max_anios: 3
+  experiencia_no_prioritaria_mayor_a_anios: 3
 
-busqueda:
-  portales_objetivo:
-    - LinkedIn
-    - Computrabajo
-    - Elempleo
-    - Indeed
-    - Torre
-  ubicacion_preferida: Bogota
-  modalidades_preferidas:
-    - Remoto
-    - Hibrido
+palabras_negativas:
+  - Senior
+  - Lead
+  - Tech Lead
+  - Architect
+  - Manager
+  - 5 años
+  - 6 años
+  - presencial fuera de Bogotá
+
+reglas_puntaje:
+  tecnologia_fuerte: 12
+  tecnologia_condicional_compatible: 12
+  tecnologia_condicional_no_prioritaria: -18
+  modalidad_preferida: 10
+  ubicacion_preferida: 8
+  nivel_preferido: 10
+  palabra_negativa: -12
+  puntaje_minimo: 0
+  puntaje_maximo: 100
