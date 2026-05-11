@@ -61,6 +61,13 @@ crear un archivo local `.env` que no se sube a Git. Para Gmail puede requerirse
 IMAP habilitado y un metodo seguro de autenticacion, como una contrasena de
 aplicacion o mecanismo equivalente.
 
+## Fase 2.2
+
+Existe un modulo inicial en `src/email_reader.py` para leer metadatos de
+correos por IMAP en una fase futura. Todavia no esta conectado a `main.py` y no
+lee correos reales automaticamente. Para usarlo mas adelante se necesitara un
+archivo local `.env`, que no debe subirse al repositorio.
+
 ## Instalacion local
 
 Crear el entorno virtual:
