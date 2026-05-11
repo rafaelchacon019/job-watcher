@@ -68,6 +68,40 @@ correos por IMAP en una fase futura. Todavia no esta conectado a `main.py` y no
 lee correos reales automaticamente. Para usarlo mas adelante se necesitara un
 archivo local `.env`, que no debe subirse al repositorio.
 
+## Prueba Manual De Correo
+
+El script `scripts/test_email_reader.py` sirve solo para probar metadatos de
+correos por IMAP. No extrae ofertas, no guarda en SQLite y no genera reportes.
+
+Antes de usarlo, crea un archivo local `.env` basado en `.env.example`. Ese
+archivo no debe subirse al repositorio. Para probar, cambia temporalmente
+`email_settings.enabled` a `true` en `config.yaml`; despues de la prueba se
+recomienda volverlo a `false` si todavia no se va a usar.
+
+```powershell
+python scripts/test_email_reader.py
+```
+
+## Fase 2.5
+
+La Fase 2.5 agrega un parser inicial en `src/email_parser.py` y una prueba
+manual en `scripts/test_email_parser.py`. Todavia no esta conectado al flujo
+principal, no guarda ofertas reales en SQLite y no genera CSV desde correos.
+
+Para probarlo se requiere un `.env` local y cambiar temporalmente
+`email_settings.enabled` a `true`. Despues de probar se recomienda volverlo a
+`false`.
+
+```powershell
+python scripts/test_email_parser.py
+```
+
+## Fase 2.5.1
+
+Esta mejora ajusta la decodificacion de correos, clasifica cada resultado con
+`email_type` y prioriza links mas utiles. Sigue siendo una prueba manual: no
+esta conectada a `main.py`, no guarda en SQLite y no genera CSV.
+
 ## Instalacion local
 
 Crear el entorno virtual:
