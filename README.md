@@ -155,6 +155,21 @@ Para probar temporalmente, cambia `notification_settings.enabled` a `true` en
 python scripts/notify_saved_jobs.py
 ```
 
+## Fase 2.9.2
+
+La Fase 2.9.2 permite enviar por Telegram las mismas ofertas prioritarias que
+se muestran por consola. Para usarlo se debe crear un bot y guardar
+`TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` en un `.env` local; ese archivo no se
+sube al repositorio.
+
+Para probar temporalmente, cambia `notification_settings.enabled` a `true` y
+`notification_settings.channels.telegram` a `true`. Despues de probar se
+recomienda volver ambos a `false` cuando no se vayan a usar.
+
+```powershell
+python scripts/notify_saved_jobs.py
+```
+
 ## Instalacion local
 
 Crear el entorno virtual:

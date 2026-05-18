@@ -1,7 +1,7 @@
-"""Prueba manual de notificaciones por consola.
+"""Prueba manual de notificaciones por consola y Telegram.
 
 Este script no lee correos, no usa IMAP, no guarda ofertas y no genera CSV.
-Solo muestra ofertas ya guardadas en SQLite que superan el puntaje minimo.
+Solo notifica ofertas ya guardadas en SQLite que superan el puntaje minimo.
 """
 
 import sys
@@ -15,7 +15,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.database import get_all_jobs
-from src.notifier import get_jobs_for_notification, print_job_notifications
+from src.notifier import (
+    get_jobs_for_notification,
+    print_job_notifications,
+    send_telegram_notifications,
+)
 
 
 def load_config():
@@ -50,12 +54,34 @@ def main():
             return
 
         jobs = get_all_jobs()
+        channels = settings.get("channels", {})
+        console_enabled = channels.get("console", True)
+        telegram_enabled = channels.get("telegram", False)
         candidate_jobs = [job for job in jobs if job.get("email_type") == "job_alert"]
         jobs_to_notify = get_jobs_for_notification(candidate_jobs, settings)
+        console_notifications = 0
+        telegram_sent = 0
+        telegram_failed = 0
 
         print(f"Ofertas candidatas encontradas: {len(candidate_jobs)}")
         print(f"Ofertas que superan el puntaje minimo: {len(jobs_to_notify)}")
-        print_job_notifications(jobs_to_notify)
+
+        if console_enabled:
+            print_job_notifications(jobs_to_notify)
+            console_notifications = len(jobs_to_notify)
+
+        if telegram_enabled:
+            try:
+                telegram_summary = send_telegram_notifications(jobs_to_notify)
+                telegram_sent = telegram_summary["enviados"]
+                telegram_failed = telegram_summary["fallidos"]
+            except ValueError as exc:
+                print(f"Telegram no configurado: {exc}")
+                telegram_failed = len(jobs_to_notify)
+
+        print(f"Notificaciones por consola mostradas: {console_notifications}")
+        print(f"Notificaciones Telegram enviadas: {telegram_sent}")
+        print(f"Notificaciones Telegram fallidas: {telegram_failed}")
 
     except RuntimeError as exc:
         print(f"Error durante la prueba de notificaciones: {exc}")

@@ -10,6 +10,9 @@ notification_settings:
   min_score: 20
   max_notifications: 5
   include_application_updates: false
+  channels:
+    console: true
+    telegram: false
 
 # Preparacion para una fase futura de lectura IMAP.
 # En Fase 2.1 queda apagado: no se leen correos reales todavia.
