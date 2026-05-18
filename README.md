@@ -116,6 +116,32 @@ Para probar se requiere un `.env` local y cambiar temporalmente
 python scripts/test_email_scoring.py
 ```
 
+## Fase 2.7
+
+La Fase 2.7 agrega un guardado manual de ofertas puntuadas con
+`scripts/save_scored_email_jobs.py`. Todavia no esta conectada a `main.py` y no
+genera CSV desde correos reales. Guarda solo ofertas tipo `job_alert` con score
+mayor a 0, usando el link para evitar duplicados.
+
+Para probar se requiere un `.env` local y cambiar temporalmente
+`email_settings.enabled` a `true`. Despues de probar se recomienda volverlo a
+`false`.
+
+```powershell
+python scripts/save_scored_email_jobs.py
+```
+
+## Fase 2.8
+
+La Fase 2.8 permite exportar ofertas reales ya guardadas usando
+`scripts/export_saved_jobs.py`. No lee correos, no usa IMAP y no guarda nuevas
+ofertas. Exporta solo registros con `email_type` igual a `job_alert` y genera
+`output/ofertas_reales_priorizadas.csv`, que esta ignorado por Git.
+
+```powershell
+python scripts/export_saved_jobs.py
+```
+
 ## Instalacion local
 
 Crear el entorno virtual:

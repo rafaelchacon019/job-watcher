@@ -31,9 +31,22 @@ def init_db():
                 link TEXT NOT NULL UNIQUE,
                 score INTEGER NOT NULL,
                 reasons TEXT NOT NULL,
+                email_type TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
+        )
+        _ensure_column(connection, "jobs", "email_type", "TEXT NOT NULL DEFAULT ''")
+
+
+def _ensure_column(connection, table_name, column_name, column_definition):
+    """Agrega una columna si la base fue creada en una fase anterior."""
+    columns = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    column_names = {column[1] for column in columns}
+
+    if column_name not in column_names:
+        connection.execute(
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
         )
 
 
@@ -47,9 +60,9 @@ def save_job(job):
             """
             INSERT INTO jobs (
                 title, company, portal, location, modality,
-                description, link, score, reasons
+                description, link, score, reasons, email_type
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(link) DO UPDATE SET
                 title = excluded.title,
                 company = excluded.company,
@@ -58,7 +71,8 @@ def save_job(job):
                 modality = excluded.modality,
                 description = excluded.description,
                 score = excluded.score,
-                reasons = excluded.reasons
+                reasons = excluded.reasons,
+                email_type = excluded.email_type
             """,
             (
                 job["title"],
@@ -70,19 +84,58 @@ def save_job(job):
                 job["link"],
                 job["score"],
                 reasons_json,
+                job.get("email_type", ""),
             ),
         )
+
+
+def save_job_if_not_exists(job):
+    """Guarda una oferta solo si su link no existe todavia.
+
+    Retorna True si inserto una fila nueva y False si el link ya existia.
+    """
+    reasons = job.get("reasons", [])
+    reasons_json = json.dumps(reasons, ensure_ascii=False)
+
+    with _connect() as connection:
+        cursor = connection.execute(
+            """
+            INSERT OR IGNORE INTO jobs (
+                title, company, portal, location, modality,
+                description, link, score, reasons, email_type
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                job["title"],
+                job["company"],
+                job["portal"],
+                job["location"],
+                job["modality"],
+                job["description"],
+                job["link"],
+                job["score"],
+                reasons_json,
+                job.get("email_type", ""),
+            ),
+        )
+
+        return cursor.rowcount == 1
 
 
 def get_all_jobs():
     """Retorna todas las ofertas guardadas, ordenadas por puntaje."""
     with _connect() as connection:
         connection.row_factory = sqlite3.Row
+        columns = connection.execute("PRAGMA table_info(jobs)").fetchall()
+        column_names = {column["name"] for column in columns}
+        email_type_field = "email_type" if "email_type" in column_names else "'' AS email_type"
+
         rows = connection.execute(
-            """
+            f"""
             SELECT
                 id, title, company, portal, location, modality,
-                description, link, score, reasons, created_at
+                description, link, score, reasons, {email_type_field}, created_at
             FROM jobs
             ORDER BY score DESC, created_at DESC
             """

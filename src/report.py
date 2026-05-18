@@ -18,6 +18,8 @@ def export_jobs_to_csv(jobs, output_path):
         "score",
         "reasons",
         "link",
+        "email_type",
+        "created_at",
     ]
 
     with path.open("w", newline="", encoding="utf-8") as csv_file:
@@ -35,6 +37,8 @@ def export_jobs_to_csv(jobs, output_path):
                     "score": job.get("score", 0),
                     "reasons": "; ".join(job.get("reasons", [])),
                     "link": job.get("link", ""),
+                    "email_type": job.get("email_type", ""),
+                    "created_at": job.get("created_at", ""),
                 }
             )
 
