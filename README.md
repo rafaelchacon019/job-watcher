@@ -142,6 +142,19 @@ ofertas. Exporta solo registros con `email_type` igual a `job_alert` y genera
 python scripts/export_saved_jobs.py
 ```
 
+## Fase 2.9.1
+
+La Fase 2.9.1 permite probar notificaciones locales por consola con
+`scripts/notify_saved_jobs.py`. No lee correos, no envia Telegram y usa ofertas
+ya guardadas en SQLite.
+
+Para probar temporalmente, cambia `notification_settings.enabled` a `true` en
+`config.yaml`. Despues de probar se recomienda volverlo a `false`.
+
+```powershell
+python scripts/notify_saved_jobs.py
+```
+
 ## Instalacion local
 
 Crear el entorno virtual:

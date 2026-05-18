@@ -3,6 +3,14 @@
 
 intervalo_revision_minutos: 60
 
+# Notificaciones locales por consola.
+# En Fase 2.9.1 quedan apagadas y solo leen ofertas ya guardadas.
+notification_settings:
+  enabled: false
+  min_score: 20
+  max_notifications: 5
+  include_application_updates: false
+
 # Preparacion para una fase futura de lectura IMAP.
 # En Fase 2.1 queda apagado: no se leen correos reales todavia.
 email_settings:
