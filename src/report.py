@@ -10,6 +10,7 @@ def export_jobs_to_csv(jobs, output_path):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     fieldnames = [
+        "email_type",
         "title",
         "company",
         "portal",
@@ -18,7 +19,6 @@ def export_jobs_to_csv(jobs, output_path):
         "score",
         "reasons",
         "link",
-        "email_type",
         "created_at",
     ]
 
@@ -29,6 +29,7 @@ def export_jobs_to_csv(jobs, output_path):
         for job in jobs:
             writer.writerow(
                 {
+                    "email_type": job.get("email_type", ""),
                     "title": job.get("title", ""),
                     "company": job.get("company", ""),
                     "portal": job.get("portal", ""),
@@ -37,7 +38,6 @@ def export_jobs_to_csv(jobs, output_path):
                     "score": job.get("score", 0),
                     "reasons": "; ".join(job.get("reasons", [])),
                     "link": job.get("link", ""),
-                    "email_type": job.get("email_type", ""),
                     "created_at": job.get("created_at", ""),
                 }
             )

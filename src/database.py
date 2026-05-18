@@ -92,10 +92,12 @@ def save_job(job):
 def save_job_if_not_exists(job):
     """Guarda una oferta solo si su link no existe todavia.
 
+    Si el link ya existe, actualiza puntaje, motivos y email_type cuando falte.
     Retorna True si inserto una fila nueva y False si el link ya existia.
     """
     reasons = job.get("reasons", [])
     reasons_json = json.dumps(reasons, ensure_ascii=False)
+    email_type = job.get("email_type", "")
 
     with _connect() as connection:
         cursor = connection.execute(
@@ -116,11 +118,36 @@ def save_job_if_not_exists(job):
                 job["link"],
                 job["score"],
                 reasons_json,
-                job.get("email_type", ""),
+                email_type,
             ),
         )
 
-        return cursor.rowcount == 1
+        if cursor.rowcount == 1:
+            return True
+
+        connection.execute(
+            """
+            UPDATE jobs
+            SET
+                score = ?,
+                reasons = ?,
+                email_type = CASE
+                    WHEN (email_type IS NULL OR email_type = '') AND ? != ''
+                    THEN ?
+                    ELSE email_type
+                END
+            WHERE link = ?
+            """,
+            (
+                job["score"],
+                reasons_json,
+                email_type,
+                email_type,
+                job["link"],
+            ),
+        )
+
+        return False
 
 
 def get_all_jobs():

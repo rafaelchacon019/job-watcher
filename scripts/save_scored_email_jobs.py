@@ -16,7 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.database import init_db, save_job_if_not_exists
-from src.email_parser import parse_emails_to_jobs
+from src.email_parser import parse_emails_to_jobs, should_ignore_as_social_notification
 from src.email_reader import read_recent_filtered_emails
 from src.scorer import calculate_score
 
@@ -84,9 +84,22 @@ def save_scored_jobs(scored_jobs):
             summary["duplicate_or_not_saved"] += 1
             continue
 
-        if save_job_if_not_exists(job):
+        if should_ignore_as_social_notification(
+            job.get("title", ""),
+            job.get("link", ""),
+            job.get("description", ""),
+        ):
+            summary["duplicate_or_not_saved"] += 1
+            continue
+
+        job_to_save = {
+            **job,
+            "email_type": "job_alert",
+        }
+
+        if save_job_if_not_exists(job_to_save):
             summary["saved"] += 1
-            summary["saved_jobs"].append(job)
+            summary["saved_jobs"].append(job_to_save)
         else:
             summary["duplicate_or_not_saved"] += 1
 

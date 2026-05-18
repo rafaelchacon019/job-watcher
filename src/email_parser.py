@@ -70,6 +70,62 @@ def extract_links_from_html(html):
     return links
 
 
+def _has_linkedin_job_signal(text):
+    """Detecta señales claras de LinkedIn Jobs u ofertas reales."""
+    normalized = _normalize(text)
+    job_signals = [
+        "jobalerts",
+        "job alert",
+        "jobs/search",
+        "jobs/view",
+        "job_alert_email",
+        "linkedin.com/jobs",
+        "empleo",
+        "vacante",
+        "engineer",
+        "developer",
+        "desarrollador",
+        "analista programador",
+    ]
+    return any(signal in normalized for signal in job_signals)
+
+
+def is_social_or_profile_notification(title="", link="", text=""):
+    """Detecta correos sociales, perfiles o invitaciones que no son ofertas."""
+    normalized = _normalize(f"{title} {link} {text}")
+    social_patterns = [
+        "ha aceptado tu invitacion",
+        "acepto tu invitacion",
+        "aceptado tu invitacion",
+        "red de contactos",
+        "invitacion",
+        "contacto",
+        "contactos",
+        "conecta con",
+        "ha visto tu perfil",
+        "tu perfil",
+        "/comm/in/",
+        "linkedin.com/comm/in",
+        "linkedin.com/in/",
+        "accept_invite",
+        "profile_image",
+        "email_accept_invite",
+        "feed",
+        "home_glimmer_static_badging",
+    ]
+    return any(pattern in normalized for pattern in social_patterns)
+
+
+def should_ignore_as_social_notification(title="", link="", text=""):
+    """Ignora señales sociales salvo que haya una señal clara de oferta."""
+    combined_text = f"{title} {link} {text}"
+    return is_social_or_profile_notification(
+        title,
+        link,
+        text,
+    ) and not _has_linkedin_job_signal(combined_text)
+
+
 def classify_email(subject, sender, text):
     """Clasifica el correo segun asunto, remitente y texto visible."""
     normalized = _normalize(f"{subject} {sender} {text}")
@@ -96,6 +152,10 @@ def classify_email(subject, sender, text):
         "nuevas ofertas",
         "postulate",
         "postlate",
+        "jobalerts",
+        "jobs/search",
+        "jobs/view",
+        "job_alert_email",
         "engineer",
         "developer",
         "desarrollador",
@@ -104,6 +164,8 @@ def classify_email(subject, sender, text):
 
     if any(keyword in normalized for keyword in application_keywords):
         return "application_update"
+    if should_ignore_as_social_notification(text=normalized):
+        return "generic_notification"
     if any(keyword in normalized for keyword in generic_keywords):
         return "generic_notification"
     if any(keyword in normalized for keyword in job_keywords):
@@ -282,6 +344,13 @@ def _clean_links(links):
         "home",
         "header",
         "footer",
+        "/comm/in/",
+        "linkedin.com/comm/in",
+        "linkedin.com/in/",
+        "accept_invite",
+        "profile_image",
+        "email_accept_invite",
+        "home_glimmer_static_badging",
         "supportcenter.computrabajo.com",
         "/hc/",
         "support",
@@ -371,9 +440,9 @@ def parse_email_to_jobs(email_data):
     combined_text = _compact_spaces(f"{subject} {sender} {text_body} {html_text}")
 
     portal = detect_portal(sender, subject)
-    email_type = classify_email(subject, sender, combined_text)
     links = extract_links_from_html(html_body)
     link = select_best_job_link(links, portal)
+    email_type = classify_email(subject, sender, f"{combined_text} {html_body} {link}")
     link_info = extract_job_info_from_link(link)
     description = combined_text[:500]
 

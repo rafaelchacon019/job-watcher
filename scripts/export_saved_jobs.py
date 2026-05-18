@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.database import get_all_jobs
+from src.email_parser import should_ignore_as_social_notification
 from src.report import export_jobs_to_csv
 
 
@@ -40,7 +41,16 @@ def main():
         print("No hay ofertas guardadas para exportar.")
         return
 
-    real_jobs = [job for job in jobs if job.get("email_type") == "job_alert"]
+    real_jobs = [
+        job
+        for job in jobs
+        if (job.get("email_type") or "") == "job_alert"
+        and not should_ignore_as_social_notification(
+            job.get("title", ""),
+            job.get("link", ""),
+            job.get("description", ""),
+        )
+    ]
     ignored_jobs = len(jobs) - len(real_jobs)
 
     print(f"Ofertas totales en base: {len(jobs)}")
