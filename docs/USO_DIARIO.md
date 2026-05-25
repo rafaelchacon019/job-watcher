@@ -188,6 +188,82 @@ python scripts/notify_saved_jobs.py
 Si solo quieres probar notificaciones guardadas, este script no lee correos ni
 usa IMAP.
 
+## Cómo Agregar Empresas ATS
+
+Las fuentes ATS usan un `slug`, que es el identificador corto de la empresa en
+la URL publica del proveedor.
+
+Ejemplo Greenhouse:
+
+```text
+https://boards.greenhouse.io/stripe
+```
+
+En ese caso, el slug seria:
+
+```yaml
+greenhouse_companies:
+  - stripe
+```
+
+Ejemplo Lever:
+
+```text
+https://jobs.lever.co/netflix
+```
+
+En ese caso, el slug seria:
+
+```yaml
+lever_companies:
+  - netflix
+```
+
+Antes de agregar una empresa, valida manualmente que realmente use Greenhouse o
+Lever y que el slug sea correcto. Si no estas seguro, dejala como pendiente de
+validar en comentarios o en tus notas.
+
+Empresas tech/remotas/LATAM que pueden ser buenas candidatas para validar:
+
+- GitLab
+- Docker
+- Supabase
+- Vercel
+- Netlify
+- Deel
+- Remote
+- Auth0 / Okta
+- Automattic
+- Canonical
+
+Para probar una empresa ATS:
+
+1. En `config.yaml`, agrega el slug validado en `greenhouse_companies` o
+   `lever_companies`.
+2. Cambia temporalmente:
+
+```yaml
+ats_sources:
+  enabled: true
+```
+
+3. Ejecuta:
+
+```powershell
+python scripts/test_ats_sources.py
+```
+
+4. Revisa si los resultados son utiles.
+5. Vuelve a dejar:
+
+```yaml
+ats_sources:
+  enabled: false
+```
+
+El script de prueba ATS no guarda en SQLite, no envia Telegram y no ejecuta el
+worker.
+
 ## Checklist Antes De Hacer Commit
 
 - Ejecutar `git status`.

@@ -111,6 +111,24 @@ ats_sources:
     - colombia
     - bogotá
     - bogota
+  # Agrega aqui slugs ATS solo despues de validarlos manualmente.
+  # Ejemplos de formato:
+  # greenhouse_companies:
+  #   - stripe
+  # lever_companies:
+  #   - netflix
+  #
+  # Candidatas tech/remotas/LATAM para validar antes de agregarlas:
+  # - GitLab
+  # - Docker
+  # - Supabase
+  # - Vercel
+  # - Netlify
+  # - Deel
+  # - Remote
+  # - Auth0 / Okta
+  # - Automattic
+  # - Canonical
   greenhouse_companies: []
   lever_companies: []
 

@@ -184,6 +184,10 @@ Para probar mas adelante, configura empresas en `ats_sources` y ejecuta:
 python scripts/test_ats_sources.py
 ```
 
+Las empresas ATS se configuran en `config.yaml` usando slugs validados en
+`greenhouse_companies` y `lever_companies`. La guia de uso diario explica como
+agregarlas sin activar monitoreo por defecto.
+
 ## Archivos Locales Ignorados
 
 Estos archivos son locales y no deben subirse a Git:
