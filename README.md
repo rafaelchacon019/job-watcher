@@ -210,6 +210,26 @@ La Fase 3.4 agrega logs persistentes para revisar ejecuciones del worker en
 `logs/worker.log` y errores en `logs/errors.log`. Los archivos `.log` estan
 ignorados por Git.
 
+## Fase 3.5.1
+
+La Fase 3.5.1 agrega scripts de arranque para Windows. Antes de usarlos, revisa
+que `config.yaml` tenga activos `worker_settings.enabled`,
+`email_settings.enabled` y `notification_settings.enabled`.
+
+En PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/start_worker.ps1
+```
+
+Con doble clic en Windows:
+
+```text
+scripts/start_worker.bat
+```
+
+Para detener el worker usa `Ctrl + C`.
+
 ## Instalacion local
 
 Crear el entorno virtual:
