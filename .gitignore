@@ -10,6 +10,7 @@ __pycache__/
 
 # Bases de datos locales
 *.db
+data/jobs.db
 data/*.db
 data/email_checkpoint.json
 

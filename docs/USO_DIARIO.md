@@ -84,6 +84,21 @@ worker_settings:
   run_once: false
 ```
 
+## Checklist Antes De Iniciar Worker
+
+- Confirmar que estas en la raiz del proyecto.
+- Confirmar que existe `.venv`.
+- Confirmar que existe `.env`.
+- Confirmar que `worker_settings.enabled` esta en `true`.
+- Confirmar que `email_settings.enabled` esta en `true`.
+- Confirmar que `notification_settings.enabled` esta en `true` si quieres alertas.
+- Confirmar si quieres `worker_settings.run_once: true` para prueba corta o
+  `false` para modo continuo.
+- Confirmar que `logs/worker.log` y `logs/errors.log` no estan abiertos en modo
+  bloqueo por otro programa.
+- Confirmar que no vas a subir `.env`, `data/jobs.db`, `data/email_checkpoint.json`
+  ni archivos de `logs/` u `output/`.
+
 ## Iniciar Worker Con PowerShell
 
 Desde la raiz del proyecto:
@@ -172,6 +187,57 @@ python scripts/notify_saved_jobs.py
 
 Si solo quieres probar notificaciones guardadas, este script no lee correos ni
 usa IMAP.
+
+## Checklist Antes De Hacer Commit
+
+- Ejecutar `git status`.
+- Revisar que no aparezca `.env`.
+- Revisar que no aparezca `.venv/`.
+- Revisar que no aparezca `data/jobs.db`.
+- Revisar que no aparezca `data/email_checkpoint.json`.
+- Revisar que no aparezcan archivos `logs/*.log`.
+- Revisar que no aparezcan archivos `output/*.csv`.
+- Revisar que no aparezcan carpetas `__pycache__/`.
+- Revisar que `config.yaml` no quede con valores activos por accidente si no
+  quieres subirlos asi.
+- Revisar que no haya tokens, correos, contrasenas ni datos sensibles en los
+  archivos modificados.
+
+## Checklist Si Telegram Deja De Funcionar
+
+- Confirmar que `TELEGRAM_BOT_TOKEN` existe en `.env`.
+- Confirmar que `TELEGRAM_CHAT_ID` existe en `.env`.
+- Confirmar que `notification_settings.enabled` esta en `true`.
+- Confirmar que `notification_settings.channels.telegram` esta en `true`.
+- Ejecutar una prueba manual con `python scripts/notify_saved_jobs.py`.
+- Revisar `logs/errors.log`.
+- Revisar que el bot no haya sido bloqueado o eliminado del chat.
+- Revisar que existan ofertas que superen `notification_settings.strict_min_score`.
+
+## Checklist Si IMAP Falla
+
+- Confirmar que `EMAIL_USER` existe en `.env`.
+- Confirmar que `EMAIL_PASSWORD` existe en `.env`.
+- Confirmar que `EMAIL_IMAP_SERVER` y `EMAIL_IMAP_PORT` son correctos.
+- Confirmar que `EMAIL_USE_SSL=true`.
+- Confirmar que IMAP esta habilitado en la cuenta.
+- Confirmar que la contrasena usada sea de aplicacion o mecanismo seguro
+  equivalente.
+- Probar metadatos con `python scripts/test_email_reader.py`.
+- Revisar `logs/errors.log`.
+
+## Checklist Si El Worker No Detecta Ofertas Nuevas
+
+- Revisar `logs/worker.log` para ver cuantos correos leyo el ciclo.
+- Revisar si `Correos ignorados por checkpoint` es alto.
+- Revisar `data/email_checkpoint.json` localmente si quieres confirmar IDs
+  procesados.
+- Confirmar que `email_settings.days_back` no este demasiado bajo.
+- Confirmar que `email_settings.max_emails` no este demasiado bajo.
+- Revisar `subject_keywords`, `sender_keywords` e `ignored_keywords`.
+- Confirmar que las alertas nuevas realmente llegaron al correo configurado.
+- Ejecutar `python scripts/test_email_parser.py` para revisar parsing manual.
+- Ejecutar `python scripts/test_email_scoring.py` para revisar scoring manual.
 
 ## Errores Comunes
 
