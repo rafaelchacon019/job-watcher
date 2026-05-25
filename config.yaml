@@ -10,6 +10,12 @@ worker_settings:
   interval_minutes: 5
   run_once: true
 
+# Checkpoint local para no reprocesar los mismos correos.
+checkpoint_settings:
+  enabled: true
+  path: data/email_checkpoint.json
+  max_processed_ids: 500
+
 # Notificaciones locales por consola.
 # En Fase 2.9.1 quedan apagadas y solo leen ofertas ya guardadas.
 notification_settings:

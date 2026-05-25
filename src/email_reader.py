@@ -92,6 +92,17 @@ def _decode_payload(part):
     return _decode_bytes(payload, charset)
 
 
+def _format_email_id(email_id):
+    """Convierte el ID IMAP a texto para usarlo como respaldo."""
+    return email_id.decode() if isinstance(email_id, bytes) else str(email_id)
+
+
+def _get_message_id(message, email_id):
+    """Obtiene Message-ID del correo o usa el ID IMAP como respaldo."""
+    header_message_id = _repair_text(message.get("Message-ID", "")).strip()
+    return header_message_id or _format_email_id(email_id)
+
+
 def _extract_bodies(message):
     """Extrae la primera parte util en texto plano y HTML."""
     text_body = ""
@@ -229,7 +240,8 @@ def read_email_metadata(connection, email_id):
         "subject": _decode_subject(message.get("Subject", "")),
         "sender": message.get("From", ""),
         "date": message.get("Date", ""),
-        "message_id": email_id.decode() if isinstance(email_id, bytes) else email_id,
+        "message_id": _get_message_id(message, email_id),
+        "imap_id": _format_email_id(email_id),
     }
 
 
@@ -259,7 +271,8 @@ def read_email_content(connection, email_id):
         raise RuntimeError(f"No se pudo interpretar el correo {email_id!r}.") from exc
 
     return {
-        "message_id": email_id.decode() if isinstance(email_id, bytes) else email_id,
+        "message_id": _get_message_id(message, email_id),
+        "imap_id": _format_email_id(email_id),
         "subject": _decode_subject(message.get("Subject", "")),
         "sender": message.get("From", ""),
         "date": message.get("Date", ""),

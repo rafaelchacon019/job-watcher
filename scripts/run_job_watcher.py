@@ -17,6 +17,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.database import init_db, save_job_if_not_exists
+from src.email_checkpoint import (
+    filter_unprocessed_emails,
+    load_checkpoint,
+    save_checkpoint,
+    update_checkpoint,
+)
 from src.email_parser import parse_emails_to_jobs, should_ignore_as_social_notification
 from src.email_reader import read_recent_filtered_emails
 from src.notifier import (
@@ -58,6 +64,48 @@ def score_jobs(jobs, config):
         )
 
     return scored_jobs
+
+
+def load_email_checkpoint(checkpoint_settings):
+    """Carga el checkpoint si esta activo."""
+    if not checkpoint_settings.get("enabled", True):
+        return None
+
+    return load_checkpoint(checkpoint_settings.get("path"))
+
+
+def get_emails_to_process(emails, checkpoint, checkpoint_settings):
+    """Filtra correos ya procesados usando el checkpoint local."""
+    summary = {
+        "enabled": checkpoint_settings.get("enabled", True),
+        "ignored": 0,
+    }
+
+    if not summary["enabled"]:
+        return emails, summary
+
+    new_emails = filter_unprocessed_emails(emails, checkpoint)
+    summary["ignored"] = len(emails) - len(new_emails)
+
+    return new_emails, summary
+
+
+def update_email_checkpoint(checkpoint, processed_emails, checkpoint_settings):
+    """Actualiza el checkpoint sin detener el worker si hay un fallo local."""
+    if not checkpoint_settings.get("enabled", True):
+        return False
+
+    try:
+        updated_checkpoint = update_checkpoint(
+            checkpoint or {},
+            processed_emails,
+            checkpoint_settings.get("max_processed_ids", 500),
+        )
+        save_checkpoint(updated_checkpoint, checkpoint_settings.get("path"))
+        return True
+    except OSError as exc:
+        print(f"No se pudo guardar el checkpoint de correos: {exc}")
+        return False
 
 
 def should_save_job(job):
@@ -143,6 +191,7 @@ def run_once(config):
     """Ejecuta una pasada completa del worker."""
     email_settings = config.get("email_settings", {})
     notification_settings = config.get("notification_settings", {})
+    checkpoint_settings = config.get("checkpoint_settings", {})
 
     if not email_settings.get("enabled", False):
         print("La lectura de correos esta desactivada en email_settings.enabled.")
@@ -150,20 +199,34 @@ def run_once(config):
 
     init_db()
 
+    checkpoint = load_email_checkpoint(checkpoint_settings)
     emails = read_recent_filtered_emails(email_settings)
-    jobs = parse_emails_to_jobs(emails)
+    emails_to_process, checkpoint_summary = get_emails_to_process(
+        emails,
+        checkpoint,
+        checkpoint_settings,
+    )
+    jobs = parse_emails_to_jobs(emails_to_process)
     scored_jobs = score_jobs(jobs, config)
     save_summary = save_new_jobs(scored_jobs)
+    checkpoint_updated = update_email_checkpoint(
+        checkpoint,
+        emails_to_process,
+        checkpoint_settings,
+    )
     notification_summary = notify_new_jobs(
         save_summary["new_jobs"],
         notification_settings,
     )
 
     print(f"Correos leidos: {len(emails)}")
+    print(f"Correos nuevos para procesar: {len(emails_to_process)}")
+    print(f"Correos ignorados por checkpoint: {checkpoint_summary['ignored']}")
     print(f"Ofertas parseadas: {len(jobs)}")
     print(f"Ofertas nuevas guardadas: {len(save_summary['new_jobs'])}")
     print(f"Duplicadas ignoradas: {save_summary['duplicates']}")
     print(f"Ofertas ignoradas por filtros: {save_summary['ignored']}")
+    print(f"Checkpoint actualizado: {'si' if checkpoint_updated else 'no'}")
     print(f"Notificaciones candidatas: {notification_summary['candidates']}")
     print(f"Notificaciones por consola: {notification_summary['console']}")
     print(f"Notificaciones Telegram enviadas: {notification_summary['telegram_sent']}")

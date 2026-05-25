@@ -11,6 +11,7 @@ __pycache__/
 # Bases de datos locales
 *.db
 data/*.db
+data/email_checkpoint.json
 
 # Reportes generados
 output/*.csv

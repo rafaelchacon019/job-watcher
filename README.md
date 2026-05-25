@@ -186,6 +186,13 @@ Para probar temporalmente, activa `worker_settings.enabled` y
 python scripts/run_job_watcher.py
 ```
 
+## Fase 3.2
+
+La Fase 3.2 agrega un checkpoint local en `data/email_checkpoint.json` para que
+el worker ignore correos ya procesados. El archivo queda ignorado por Git y
+guarda la ultima ejecucion junto con una lista limitada de `message_id`
+procesados.
+
 ## Instalacion local
 
 Crear el entorno virtual:
