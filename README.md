@@ -32,6 +32,7 @@ evitar reprocesar correos ya revisados.
 - python-dotenv
 - requests
 - Telegram Bot API
+- OpenAI API opcional
 - logging estandar de Python
 - Endpoints publicos ATS tipo Greenhouse y Lever
 
@@ -59,6 +60,7 @@ job-watcher/
 |   |-- scorer.py
 |   |-- database.py
 |   |-- notifier.py
+|   |-- ai_analyzer.py
 |   |-- email_checkpoint.py
 |   |-- deduplication.py
 |   |-- logger.py
@@ -80,6 +82,7 @@ job-watcher/
 - `src/scorer.py`: motor de puntaje.
 - `src/database.py`: persistencia en SQLite.
 - `src/notifier.py`: notificaciones por consola y Telegram.
+- `src/ai_analyzer.py`: analisis IA opcional sobre ofertas priorizadas.
 - `src/email_checkpoint.py`: checkpoint de correos procesados.
 - `src/deduplication.py`: huellas para detectar ofertas repetidas entre fuentes.
 - `src/logger.py`: logs persistentes del worker.
@@ -187,6 +190,25 @@ python scripts/test_ats_sources.py
 Las empresas ATS se configuran en `config.yaml` usando slugs validados en
 `greenhouse_companies` y `lever_companies`. La guia de uso diario explica como
 agregarlas sin activar monitoreo por defecto.
+
+## Fase 5.1
+
+La Fase 5.1 agrega analisis IA opcional con OpenAI sobre ofertas ya guardadas y
+priorizadas. La IA complementa el scoring local, no lo reemplaza, y no es
+requisito para que el worker funcione.
+
+Para probar manualmente:
+
+1. Agrega `OPENAI_API_KEY` en tu `.env` local.
+2. Cambia temporalmente `ai_settings.enabled` a `true` en `config.yaml`.
+3. Ejecuta:
+
+```powershell
+python scripts/test_ai_analysis.py
+```
+
+El script no guarda resultados en SQLite, no envia Telegram y no modifica el
+worker.
 
 ## Archivos Locales Ignorados
 

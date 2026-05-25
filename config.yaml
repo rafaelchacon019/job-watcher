@@ -19,6 +19,16 @@ logging_settings:
   error_log: errors.log
   level: INFO
 
+# Analisis IA opcional sobre ofertas ya priorizadas.
+# En Fase 5.1 queda apagado y solo se prueba manualmente.
+ai_settings:
+  enabled: false
+  provider: openai
+  model: gpt-4.1-mini
+  max_jobs_per_cycle: 3
+  min_score: 20
+  include_raw_description: false
+
 # Checkpoint local para no reprocesar los mismos correos.
 checkpoint_settings:
   enabled: true
