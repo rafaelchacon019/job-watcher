@@ -18,7 +18,8 @@ CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.database import init_db, save_job_if_not_exists
+from src.database import init_db, job_exists_by_fingerprint, save_job_if_not_exists
+from src.deduplication import build_job_fingerprint
 from src.email_checkpoint import (
     filter_unprocessed_emails,
     load_checkpoint,
@@ -69,13 +70,15 @@ def score_jobs(jobs, config):
 
     for job in jobs:
         score_result = calculate_score(job, config)
-        scored_jobs.append(
-            {
-                **job,
-                "score": score_result["score"],
-                "reasons": score_result["reasons"],
-            }
+        scored_job = {
+            **job,
+            "score": score_result["score"],
+            "reasons": score_result["reasons"],
+        }
+        scored_job["fingerprint"] = job.get("fingerprint") or build_job_fingerprint(
+            scored_job
         )
+        scored_jobs.append(scored_job)
 
     return scored_jobs
 
@@ -145,6 +148,7 @@ def save_new_jobs(scored_jobs):
     summary = {
         "new_jobs": [],
         "duplicates": 0,
+        "duplicates_by_fingerprint": 0,
         "ignored": 0,
     }
 
@@ -157,11 +161,17 @@ def save_new_jobs(scored_jobs):
             **job,
             "email_type": "job_alert",
         }
+        duplicated_fingerprint = job_exists_by_fingerprint(
+            job_to_save.get("fingerprint", ""),
+            job_to_save.get("link", ""),
+        )
 
         if save_job_if_not_exists(job_to_save):
             summary["new_jobs"].append(job_to_save)
         else:
             summary["duplicates"] += 1
+            if duplicated_fingerprint:
+                summary["duplicates_by_fingerprint"] += 1
 
     return summary
 
@@ -171,6 +181,7 @@ def empty_save_summary():
     return {
         "new_jobs": [],
         "duplicates": 0,
+        "duplicates_by_fingerprint": 0,
         "ignored": 0,
     }
 
@@ -383,6 +394,7 @@ def run_once(config):
         "duplicadas=%s | ignoradas=%s | checkpoint_actualizado=%s | "
         "ats_total=%s | ats_filtradas_keywords=%s | ats_excluidas=%s | "
         "ats_score_suficiente=%s | ats_nuevas_guardadas=%s | ats_duplicadas=%s | "
+        "duplicadas_por_fingerprint=%s | ats_duplicadas_por_fingerprint=%s | "
         "notificaciones_candidatas=%s | consola=%s | telegram_enviadas=%s | "
         "telegram_fallidas=%s",
         email_summary["correos_leidos"],
@@ -399,6 +411,8 @@ def run_once(config):
         ats_summary["ats_score_suficiente"],
         len(ats_save_summary["new_jobs"]),
         ats_save_summary["duplicates"],
+        email_save_summary["duplicates_by_fingerprint"],
+        ats_save_summary["duplicates_by_fingerprint"],
         notification_summary["candidates"],
         notification_summary["console"],
         notification_summary["telegram_sent"],

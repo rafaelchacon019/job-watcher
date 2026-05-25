@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.database import init_db, save_job_if_not_exists
+from src.deduplication import build_job_fingerprint
 from src.email_parser import parse_emails_to_jobs, should_ignore_as_social_notification
 from src.email_reader import read_recent_filtered_emails
 from src.scorer import calculate_score
@@ -43,13 +44,15 @@ def score_jobs(jobs, config):
 
     for job in jobs:
         score_result = calculate_score(job, config)
-        scored_jobs.append(
-            {
-                **job,
-                "score": score_result["score"],
-                "reasons": score_result["reasons"],
-            }
+        scored_job = {
+            **job,
+            "score": score_result["score"],
+            "reasons": score_result["reasons"],
+        }
+        scored_job["fingerprint"] = job.get("fingerprint") or build_job_fingerprint(
+            scored_job
         )
+        scored_jobs.append(scored_job)
 
     return sorted(scored_jobs, key=lambda job: job["score"], reverse=True)
 

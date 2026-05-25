@@ -60,6 +60,7 @@ job-watcher/
 |   |-- database.py
 |   |-- notifier.py
 |   |-- email_checkpoint.py
+|   |-- deduplication.py
 |   |-- logger.py
 |   `-- sources/
 |-- data/
@@ -80,6 +81,7 @@ job-watcher/
 - `src/database.py`: persistencia en SQLite.
 - `src/notifier.py`: notificaciones por consola y Telegram.
 - `src/email_checkpoint.py`: checkpoint de correos procesados.
+- `src/deduplication.py`: huellas para detectar ofertas repetidas entre fuentes.
 - `src/logger.py`: logs persistentes del worker.
 - `src/sources/`: fuentes ATS publicas permitidas.
 
@@ -172,6 +174,9 @@ La Fase 4.3 permite que el worker tambien consulte ATS cuando
 `ats_sources.enabled` esta en `true`. En ese modo guarda solo ofertas nuevas,
 usa el link para evitar duplicados y notifica solo las nuevas ofertas que pasen
 los filtros de notificacion.
+
+La Fase 4.4 agrega deduplicacion por `fingerprint` para detectar ofertas
+similares aunque vengan de correo y ATS con links distintos.
 
 Para probar mas adelante, configura empresas en `ats_sources` y ejecuta:
 

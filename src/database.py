@@ -4,6 +4,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from src.deduplication import build_job_fingerprint
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DB_PATH = BASE_DIR / "data" / "jobs.db"
@@ -32,11 +34,16 @@ def init_db():
                 score INTEGER NOT NULL,
                 reasons TEXT NOT NULL,
                 email_type TEXT NOT NULL DEFAULT '',
+                fingerprint TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
         _ensure_column(connection, "jobs", "email_type", "TEXT NOT NULL DEFAULT ''")
+        _ensure_column(connection, "jobs", "fingerprint", "TEXT NOT NULL DEFAULT ''")
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_jobs_fingerprint ON jobs(fingerprint)"
+        )
 
 
 def _ensure_column(connection, table_name, column_name, column_definition):
@@ -54,15 +61,16 @@ def save_job(job):
     """Guarda una oferta y actualiza sus datos si el link ya existe."""
     reasons = job.get("reasons", [])
     reasons_json = json.dumps(reasons, ensure_ascii=False)
+    fingerprint = job.get("fingerprint") or build_job_fingerprint(job)
 
     with _connect() as connection:
         connection.execute(
             """
             INSERT INTO jobs (
                 title, company, portal, location, modality,
-                description, link, score, reasons, email_type
+                description, link, score, reasons, email_type, fingerprint
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(link) DO UPDATE SET
                 title = excluded.title,
                 company = excluded.company,
@@ -72,7 +80,8 @@ def save_job(job):
                 description = excluded.description,
                 score = excluded.score,
                 reasons = excluded.reasons,
-                email_type = excluded.email_type
+                email_type = excluded.email_type,
+                fingerprint = excluded.fingerprint
             """,
             (
                 job["title"],
@@ -85,6 +94,7 @@ def save_job(job):
                 job["score"],
                 reasons_json,
                 job.get("email_type", ""),
+                fingerprint,
             ),
         )
 
@@ -98,15 +108,53 @@ def save_job_if_not_exists(job):
     reasons = job.get("reasons", [])
     reasons_json = json.dumps(reasons, ensure_ascii=False)
     email_type = job.get("email_type", "")
+    fingerprint = job.get("fingerprint") or build_job_fingerprint(job)
 
     with _connect() as connection:
+        existing_by_link = connection.execute(
+            "SELECT id FROM jobs WHERE link = ?",
+            (job["link"],),
+        ).fetchone()
+
+        if existing_by_link:
+            _update_existing_job(
+                connection,
+                existing_by_link[0],
+                job,
+                reasons_json,
+                email_type,
+                fingerprint,
+            )
+            return False
+
+        if fingerprint:
+            existing_by_fingerprint = connection.execute(
+                """
+                SELECT id FROM jobs
+                WHERE fingerprint = ?
+                LIMIT 1
+                """,
+                (fingerprint,),
+            ).fetchone()
+
+            if existing_by_fingerprint:
+                _update_existing_job(
+                    connection,
+                    existing_by_fingerprint[0],
+                    job,
+                    reasons_json,
+                    email_type,
+                    fingerprint,
+                )
+                return False
+
         cursor = connection.execute(
             """
-            INSERT OR IGNORE INTO jobs (
+            INSERT INTO jobs (
                 title, company, portal, location, modality,
-                description, link, score, reasons, email_type
+                description, link, score, reasons, email_type, fingerprint
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 job["title"],
@@ -119,35 +167,64 @@ def save_job_if_not_exists(job):
                 job["score"],
                 reasons_json,
                 email_type,
+                fingerprint,
             ),
         )
 
         if cursor.rowcount == 1:
             return True
 
-        connection.execute(
-            """
-            UPDATE jobs
-            SET
-                score = ?,
-                reasons = ?,
-                email_type = CASE
-                    WHEN (email_type IS NULL OR email_type = '') AND ? != ''
-                    THEN ?
-                    ELSE email_type
-                END
-            WHERE link = ?
-            """,
-            (
-                job["score"],
-                reasons_json,
-                email_type,
-                email_type,
-                job["link"],
-            ),
-        )
-
         return False
+
+
+def _update_existing_job(connection, job_id, job, reasons_json, email_type, fingerprint):
+    """Actualiza datos utiles de una oferta ya existente."""
+    connection.execute(
+        """
+        UPDATE jobs
+        SET
+            score = ?,
+            reasons = ?,
+            email_type = CASE
+                WHEN (email_type IS NULL OR email_type = '') AND ? != ''
+                THEN ?
+                ELSE email_type
+            END,
+            fingerprint = CASE
+                WHEN (fingerprint IS NULL OR fingerprint = '') AND ? != ''
+                THEN ?
+                ELSE fingerprint
+            END
+        WHERE id = ?
+        """,
+        (
+            job["score"],
+            reasons_json,
+            email_type,
+            email_type,
+            fingerprint,
+            fingerprint,
+            job_id,
+        ),
+    )
+
+
+def job_exists_by_fingerprint(fingerprint, current_link=""):
+    """Indica si ya existe una oferta con la misma huella y otro link."""
+    if not fingerprint:
+        return False
+
+    with _connect() as connection:
+        row = connection.execute(
+            """
+            SELECT id FROM jobs
+            WHERE fingerprint = ? AND link != ?
+            LIMIT 1
+            """,
+            (fingerprint, current_link),
+        ).fetchone()
+
+    return row is not None
 
 
 def get_all_jobs():
@@ -157,12 +234,16 @@ def get_all_jobs():
         columns = connection.execute("PRAGMA table_info(jobs)").fetchall()
         column_names = {column["name"] for column in columns}
         email_type_field = "email_type" if "email_type" in column_names else "'' AS email_type"
+        fingerprint_field = (
+            "fingerprint" if "fingerprint" in column_names else "'' AS fingerprint"
+        )
 
         rows = connection.execute(
             f"""
             SELECT
                 id, title, company, portal, location, modality,
-                description, link, score, reasons, {email_type_field}, created_at
+                description, link, score, reasons, {email_type_field},
+                {fingerprint_field}, created_at
             FROM jobs
             ORDER BY score DESC, created_at DESC
             """
