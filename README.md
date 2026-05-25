@@ -204,6 +204,12 @@ y se puede detener con `Ctrl + C`.
 python scripts/run_job_watcher.py
 ```
 
+## Fase 3.4
+
+La Fase 3.4 agrega logs persistentes para revisar ejecuciones del worker en
+`logs/worker.log` y errores en `logs/errors.log`. Los archivos `.log` estan
+ignorados por Git.
+
 ## Instalacion local
 
 Crear el entorno virtual:

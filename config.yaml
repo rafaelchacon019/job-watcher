@@ -9,7 +9,15 @@ intervalo_revision_minutos: 60
 worker_settings:
   enabled: false
   interval_minutes: 1
-  run_once: false
+  run_once: true
+
+# Logs locales del worker.
+logging_settings:
+  enabled: true
+  log_dir: logs
+  worker_log: worker.log
+  error_log: errors.log
+  level: INFO
 
 # Checkpoint local para no reprocesar los mismos correos.
 checkpoint_settings:
@@ -29,7 +37,7 @@ notification_settings:
   skip_non_target_areas: true
   channels:
     console: true
-    telegram: true
+    telegram: false
 
 # Preparacion para una fase futura de lectura IMAP.
 # En Fase 2.1 queda apagado: no se leen correos reales todavia.

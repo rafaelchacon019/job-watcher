@@ -17,6 +17,9 @@ data/email_checkpoint.json
 output/*.csv
 output/*.xlsx
 
+# Logs locales
+logs/*.log
+
 # Archivos temporales del sistema
 .DS_Store
 Thumbs.db

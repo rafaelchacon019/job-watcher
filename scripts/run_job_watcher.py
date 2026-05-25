@@ -7,6 +7,7 @@ No genera CSV.
 
 import sys
 import time
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -31,7 +32,11 @@ from src.notifier import (
     print_job_notifications,
     send_telegram_notifications,
 )
+from src.logger import setup_logger
 from src.scorer import calculate_score
+
+
+LOGGER = logging.getLogger("job_watcher.worker")
 
 
 def load_config():
@@ -105,7 +110,7 @@ def update_email_checkpoint(checkpoint, processed_emails, checkpoint_settings):
         save_checkpoint(updated_checkpoint, checkpoint_settings.get("path"))
         return True
     except OSError as exc:
-        print(f"No se pudo guardar el checkpoint de correos: {exc}")
+        LOGGER.error("No se pudo guardar el checkpoint de correos: %s", exc)
         return False
 
 
@@ -163,7 +168,7 @@ def notify_new_jobs(new_jobs, notification_settings):
     }
 
     if not notification_settings.get("enabled", False):
-        print("Notificaciones desactivadas en notification_settings.enabled.")
+        LOGGER.info("Notificaciones desactivadas en notification_settings.enabled.")
         return summary
 
     jobs_to_notify = get_jobs_for_notification(new_jobs, notification_settings)
@@ -182,7 +187,7 @@ def notify_new_jobs(new_jobs, notification_settings):
             summary["telegram_sent"] = telegram_summary["enviados"]
             summary["telegram_failed"] = telegram_summary["fallidos"]
         except ValueError as exc:
-            print(f"Telegram no configurado: {exc}")
+            LOGGER.warning("Telegram no configurado: %s", exc)
             summary["telegram_failed"] = len(jobs_to_notify)
 
     return summary
@@ -200,11 +205,11 @@ def get_interval_minutes(worker_settings):
     try:
         interval_minutes = int(worker_settings.get("interval_minutes", default_interval))
     except (TypeError, ValueError):
-        print("Intervalo invalido. Se usaran 5 minutos por defecto.")
+        LOGGER.warning("Intervalo invalido. Se usaran 5 minutos por defecto.")
         return default_interval
 
     if interval_minutes <= 0:
-        print("Intervalo menor o igual a 0. Se usaran 5 minutos por defecto.")
+        LOGGER.warning("Intervalo menor o igual a 0. Se usaran 5 minutos por defecto.")
         return default_interval
 
     return interval_minutes
@@ -213,7 +218,7 @@ def get_interval_minutes(worker_settings):
 def print_next_run(interval_minutes):
     """Muestra la hora aproximada de la siguiente ejecucion."""
     next_run_at = datetime.now() + timedelta(minutes=interval_minutes)
-    print(f"Proxima ejecucion: {next_run_at.strftime('%Y-%m-%d %H:%M:%S')}")
+    LOGGER.info("Proxima ejecucion: %s", next_run_at.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 def run_once(config):
@@ -223,7 +228,7 @@ def run_once(config):
     checkpoint_settings = config.get("checkpoint_settings", {})
 
     if not email_settings.get("enabled", False):
-        print("La lectura de correos esta desactivada en email_settings.enabled.")
+        LOGGER.info("La lectura de correos esta desactivada en email_settings.enabled.")
         return
 
     init_db()
@@ -248,27 +253,36 @@ def run_once(config):
         notification_settings,
     )
 
-    print(f"Correos leidos: {len(emails)}")
-    print(f"Correos nuevos para procesar: {len(emails_to_process)}")
-    print(f"Correos ignorados por checkpoint: {checkpoint_summary['ignored']}")
-    print(f"Ofertas parseadas: {len(jobs)}")
-    print(f"Ofertas nuevas guardadas: {len(save_summary['new_jobs'])}")
-    print(f"Duplicadas ignoradas: {save_summary['duplicates']}")
-    print(f"Ofertas ignoradas por filtros: {save_summary['ignored']}")
-    print(f"Checkpoint actualizado: {'si' if checkpoint_updated else 'no'}")
-    print(f"Notificaciones candidatas: {notification_summary['candidates']}")
-    print(f"Notificaciones por consola: {notification_summary['console']}")
-    print(f"Notificaciones Telegram enviadas: {notification_summary['telegram_sent']}")
-    print(f"Notificaciones Telegram fallidas: {notification_summary['telegram_failed']}")
+    LOGGER.info(
+        "Resumen del ciclo | correos_leidos=%s | correos_nuevos=%s | "
+        "checkpoint_ignorados=%s | ofertas_parseadas=%s | nuevas_guardadas=%s | "
+        "duplicadas=%s | ignoradas=%s | checkpoint_actualizado=%s | "
+        "notificaciones_candidatas=%s | consola=%s | telegram_enviadas=%s | "
+        "telegram_fallidas=%s",
+        len(emails),
+        len(emails_to_process),
+        checkpoint_summary["ignored"],
+        len(jobs),
+        len(save_summary["new_jobs"]),
+        save_summary["duplicates"],
+        save_summary["ignored"],
+        "si" if checkpoint_updated else "no",
+        notification_summary["candidates"],
+        notification_summary["console"],
+        notification_summary["telegram_sent"],
+        notification_summary["telegram_failed"],
+    )
 
 
 def run_worker():
     """Ejecuta el worker una vez o en ciclo segun config.yaml."""
     config = load_config()
+    setup_logger(config.get("logging_settings", {}))
     worker_settings = config.get("worker_settings", {})
+    LOGGER.info("Worker local iniciado.")
 
     if not worker_settings.get("enabled", False):
-        print(
+        LOGGER.info(
             "El worker esta desactivado. "
             "Cambia worker_settings.enabled a true para probar."
         )
@@ -279,11 +293,11 @@ def run_worker():
 
     while True:
         try:
-            print(f"Iniciando ciclo del worker: {current_time_label()}")
+            LOGGER.info("Iniciando ciclo del worker: %s", current_time_label())
             run_once(config)
         except Exception as exc:
             # El worker no debe caer por un fallo puntual de correo o red.
-            print(f"Error durante la ejecucion del worker: {exc}")
+            LOGGER.exception("Error durante la ejecucion del worker: %s", exc)
 
         if run_once_enabled:
             return
@@ -297,11 +311,14 @@ def run_worker():
             interval_minutes = get_interval_minutes(worker_settings)
             run_once_enabled = worker_settings.get("run_once", run_once_enabled)
         except Exception as exc:
-            print(f"No se pudo recargar config.yaml: {exc}")
+            LOGGER.exception("No se pudo recargar config.yaml: %s", exc)
 
 
 if __name__ == "__main__":
     try:
         run_worker()
     except KeyboardInterrupt:
-        print("Worker detenido manualmente.")
+        if LOGGER.handlers:
+            LOGGER.info("Worker detenido manualmente.")
+        else:
+            print("Worker detenido manualmente.")
