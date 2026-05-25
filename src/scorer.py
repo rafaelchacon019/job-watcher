@@ -78,6 +78,8 @@ def _is_generic_alert_title(title):
     """Detecta titulos que parecen alertas generales, no ofertas concretas."""
     normalized_title = _normalize(title)
     generic_phrases = [
+        "tu perfil encaja perfectamente",
+        "oportunidad unica",
         "alerta general de empleo",
         "nuevas vacantes",
         "nuevas ofertas",
@@ -86,6 +88,41 @@ def _is_generic_alert_title(title):
     ]
 
     return any(phrase in normalized_title for phrase in generic_phrases)
+
+
+def _has_junior_signal(text):
+    """Detecta senales simples de nivel inicial o junior."""
+    junior_patterns = [
+        "junior",
+        "entry level",
+        "trainee",
+        "aprendiz",
+        "practicante",
+    ]
+    return any(_contains_keyword(text, pattern) for pattern in junior_patterns)
+
+
+def _is_non_target_area(text):
+    """Detecta areas que no son prioridad principal para el perfil."""
+    non_target_patterns = [
+        "AI/ML",
+        "Machine Learning",
+        "Data Scientist",
+        "Data Engineer",
+        "Data Analyst",
+        "DevOps",
+        "Cloud Engineer",
+        "Cybersecurity",
+        "Security Engineer",
+    ]
+
+    if any(_contains_keyword(text, pattern) for pattern in non_target_patterns):
+        return True
+
+    if _contains_keyword(text, "QA Automation") and not _has_junior_signal(text):
+        return True
+
+    return False
 
 
 def _score_email_type(email_type, rules):
@@ -149,6 +186,10 @@ def calculate_score(job, config):
     if _is_generic_alert_title(job.get("title", "")):
         score += rules.get("titulo_generico_alerta", -10)
         reasons.append("Titulo generico de alerta")
+
+    if _is_non_target_area(text):
+        score += rules.get("area_no_prioritaria", -20)
+        reasons.append("Área no prioritaria para el perfil")
 
     link_score, link_reason = _score_link(job.get("link", ""), rules)
     score += link_score

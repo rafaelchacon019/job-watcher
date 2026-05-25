@@ -170,6 +170,22 @@ recomienda volver ambos a `false` cuando no se vayan a usar.
 python scripts/notify_saved_jobs.py
 ```
 
+## Fase 3.1
+
+La Fase 3.1 agrega un worker local en `scripts/run_job_watcher.py`. El worker
+puede leer correos, parsear ofertas, calcular puntajes, guardar ofertas nuevas
+y notificar por consola o Telegram segun la configuracion. No esta conectado a
+`main.py` y no genera CSV.
+
+Para probar temporalmente, activa `worker_settings.enabled` y
+`email_settings.enabled` en `config.yaml`. Si `worker_settings.run_once` esta en
+`true`, ejecuta una sola pasada; si esta en `false`, repite cada
+`worker_settings.interval_minutes`.
+
+```powershell
+python scripts/run_job_watcher.py
+```
+
 ## Instalacion local
 
 Crear el entorno virtual:

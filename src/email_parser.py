@@ -196,6 +196,8 @@ def _is_generic_alert_subject(subject):
     """Detecta asuntos que son alertas generales y no una vacante concreta."""
     normalized = _normalize(subject)
     phrases = [
+        "tu perfil encaja perfectamente",
+        "oportunidad unica",
         "tienes nuevas ofertas de empleo",
         "nuevas ofertas de empleo",
         "ofertas de empleo esperandote",
@@ -208,18 +210,38 @@ def _is_generic_alert_subject(subject):
     return any(phrase in normalized for phrase in phrases)
 
 
-def _is_generic_title(title):
-    """Detecta titulos temporales que conviene reemplazar si hay mejor dato."""
+def is_generic_or_promotional_title(title):
+    """Detecta titulos generales o promocionales que no son cargos concretos."""
     normalized = _normalize(title)
     phrases = [
+        "tu perfil encaja perfectamente",
+        "oportunidad unica",
         "alerta general de empleo",
         "nuevas vacantes",
         "nuevas ofertas",
         "buscas empleo como",
         "te buscan",
+        "te buscan para nuevos empleos",
         "empresas necesitan talento",
     ]
     return any(phrase in normalized for phrase in phrases)
+
+
+def _is_generic_title(title):
+    """Detecta titulos temporales que conviene reemplazar si hay mejor dato."""
+    return is_generic_or_promotional_title(title)
+
+
+def is_concrete_job_link(link):
+    """Detecta links que parecen apuntar a una oferta concreta."""
+    normalized_link = _normalize(link)
+    concrete_patterns = [
+        "o_detail",
+        "oferta-de-trabajo-de",
+        "linkedin.com/jobs/view",
+        "jobs/view",
+    ]
+    return any(pattern in normalized_link for pattern in concrete_patterns)
 
 
 def guess_title_from_subject(subject):

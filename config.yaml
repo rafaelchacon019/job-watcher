@@ -3,16 +3,26 @@
 
 intervalo_revision_minutos: 60
 
+# Worker local automatico.
+# En Fase 3.1 queda apagado por defecto para evitar ejecuciones accidentales.
+worker_settings:
+  enabled: false
+  interval_minutes: 5
+  run_once: true
+
 # Notificaciones locales por consola.
 # En Fase 2.9.1 quedan apagadas y solo leen ofertas ya guardadas.
 notification_settings:
   enabled: false
   min_score: 20
+  strict_min_score: 25
   max_notifications: 5
   include_application_updates: false
+  skip_generic_titles: true
+  skip_non_target_areas: true
   channels:
     console: true
-    telegram: false
+    telegram: true
 
 # Preparacion para una fase futura de lectura IMAP.
 # En Fase 2.1 queda apagado: no se leen correos reales todavia.

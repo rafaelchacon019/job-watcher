@@ -1,8 +1,64 @@
 """Notificaciones locales para ofertas guardadas."""
 
 import os
+import unicodedata
 
 import requests
+
+from src.email_parser import is_generic_or_promotional_title
+
+
+def _normalize(text):
+    """Normaliza texto para filtros simples de notificacion."""
+    normalized = unicodedata.normalize("NFD", str(text or "").lower())
+    return "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+
+
+def _contains(text, phrase):
+    """Busca una frase normalizada dentro de otro texto."""
+    return _normalize(phrase) in _normalize(text)
+
+
+def _has_junior_signal(text):
+    """Detecta senales basicas de nivel junior o inicial."""
+    junior_patterns = [
+        "junior",
+        "entry level",
+        "trainee",
+        "aprendiz",
+        "practicante",
+    ]
+    return any(_contains(text, pattern) for pattern in junior_patterns)
+
+
+def _is_non_target_area(job):
+    """Detecta areas que no son prioridad para notificaciones."""
+    text = " ".join(
+        [
+            job.get("title", ""),
+            job.get("description", ""),
+            job.get("link", ""),
+        ]
+    )
+    non_target_patterns = [
+        "AI/ML",
+        "Machine Learning",
+        "Data Scientist",
+        "Data Engineer",
+        "Data Analyst",
+        "DevOps",
+        "Cloud Engineer",
+        "Cybersecurity",
+        "Security Engineer",
+    ]
+
+    if any(_contains(text, pattern) for pattern in non_target_patterns):
+        return True
+
+    if _contains(text, "QA Automation") and not _has_junior_signal(text):
+        return True
+
+    return False
 
 
 def format_job_notification(job):
@@ -29,22 +85,23 @@ def format_job_notification(job):
 
 def get_jobs_for_notification(jobs, settings):
     """Filtra y ordena las ofertas que merecen notificacion."""
-    min_score = settings.get("min_score", 20)
+    min_score = settings.get("strict_min_score", settings.get("min_score", 20))
     max_notifications = settings.get("max_notifications", 5)
-    include_application_updates = settings.get("include_application_updates", False)
+    skip_generic_titles = settings.get("skip_generic_titles", True)
+    skip_non_target_areas = settings.get("skip_non_target_areas", True)
     filtered_jobs = []
 
     for job in jobs:
-        email_type = job.get("email_type", "")
-
-        if email_type == "job_alert":
-            pass
-        elif email_type == "application_update" and include_application_updates:
-            pass
-        else:
+        if job.get("email_type", "") != "job_alert":
             continue
 
         if job.get("score", 0) < min_score:
+            continue
+
+        if skip_generic_titles and is_generic_or_promotional_title(job.get("title", "")):
+            continue
+
+        if skip_non_target_areas and _is_non_target_area(job):
             continue
 
         filtered_jobs.append(job)
