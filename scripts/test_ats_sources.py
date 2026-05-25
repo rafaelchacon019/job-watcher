@@ -5,7 +5,6 @@ Solo consulta empresas configuradas cuando ats_sources.enabled esta en true.
 """
 
 import sys
-from copy import deepcopy
 from pathlib import Path
 
 
@@ -17,6 +16,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.sources.greenhouse_source import fetch_greenhouse_jobs
 from src.sources.lever_source import fetch_lever_jobs
+from src.sources.base_source import (
+    build_ats_scoring_config,
+    filter_jobs_by_exclusions,
+    filter_jobs_by_keywords,
+    get_int_setting,
+)
 from src.scorer import calculate_score
 
 
@@ -53,67 +58,6 @@ def print_job(job, index):
     print(f"   Link: {job.get('link', '')}")
 
 
-def job_search_text(job):
-    """Une titulo, descripcion, ubicacion y otros campos para filtros ATS."""
-    return " ".join(
-        [
-            job.get("title", ""),
-            job.get("company", ""),
-            job.get("portal", ""),
-            job.get("location", ""),
-            job.get("modality", ""),
-            job.get("description", ""),
-            job.get("link", ""),
-        ]
-    ).lower()
-
-
-def job_matches_keywords(job, keywords):
-    """Revisa si una oferta contiene alguna palabra clave configurada."""
-    if not keywords:
-        return True
-
-    text = job_search_text(job)
-    return any(str(keyword).lower() in text for keyword in keywords)
-
-
-def filter_jobs_by_keywords(jobs, keywords):
-    """Filtra ofertas ATS usando keywords opcionales."""
-    return [job for job in jobs if job_matches_keywords(job, keywords)]
-
-
-def job_has_excluded_keyword(job, exclude_keywords):
-    """Detecta palabras de areas no objetivo para esta prueba manual."""
-    text = job_search_text(job)
-    return any(str(keyword).lower() in text for keyword in exclude_keywords)
-
-
-def filter_jobs_by_exclusions(jobs, exclude_keywords):
-    """Quita ofertas ATS que contienen palabras no objetivo."""
-    if not exclude_keywords:
-        return jobs, 0
-
-    filtered_jobs = [
-        job for job in jobs if not job_has_excluded_keyword(job, exclude_keywords)
-    ]
-    excluded_count = len(jobs) - len(filtered_jobs)
-    return filtered_jobs, excluded_count
-
-
-def build_scoring_config(config, settings):
-    """Agrega preferencias ATS al config usado por calculate_score."""
-    scoring_config = deepcopy(config)
-    preferred_locations = settings.get("preferred_locations", [])
-    configured_locations = scoring_config.get("ubicaciones_preferidas", [])
-
-    for location in preferred_locations:
-        if location not in configured_locations:
-            configured_locations.append(location)
-
-    scoring_config["ubicaciones_preferidas"] = configured_locations
-    return scoring_config
-
-
 def score_jobs(jobs, config):
     """Calcula score de ofertas ATS sin guardar resultados."""
     scored_jobs = []
@@ -129,14 +73,6 @@ def score_jobs(jobs, config):
         )
 
     return scored_jobs
-
-
-def get_int_setting(settings, key, default):
-    """Lee un entero desde config con fallback sencillo."""
-    try:
-        return int(settings.get(key, default))
-    except (TypeError, ValueError):
-        return default
 
 
 def main():
@@ -160,7 +96,7 @@ def main():
         exclude_keywords = settings.get("exclude_keywords", [])
         max_results = get_int_setting(settings, "max_results", 10)
         min_score = get_int_setting(settings, "min_score", 20)
-        scoring_config = build_scoring_config(config, settings)
+        scoring_config = build_ats_scoring_config(config, settings)
 
         jobs = []
         jobs.extend(fetch_greenhouse_jobs(greenhouse_companies))

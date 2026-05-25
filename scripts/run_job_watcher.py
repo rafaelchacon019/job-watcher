@@ -34,6 +34,14 @@ from src.notifier import (
 )
 from src.logger import setup_logger
 from src.scorer import calculate_score
+from src.sources.base_source import (
+    build_ats_scoring_config,
+    filter_jobs_by_exclusions,
+    filter_jobs_by_keywords,
+    get_int_setting,
+)
+from src.sources.greenhouse_source import fetch_greenhouse_jobs
+from src.sources.lever_source import fetch_lever_jobs
 
 
 LOGGER = logging.getLogger("job_watcher.worker")
@@ -158,6 +166,106 @@ def save_new_jobs(scored_jobs):
     return summary
 
 
+def empty_save_summary():
+    """Crea un resumen vacio de guardado."""
+    return {
+        "new_jobs": [],
+        "duplicates": 0,
+        "ignored": 0,
+    }
+
+
+def process_email_sources(config):
+    """Procesa correos configurados y guarda ofertas nuevas."""
+    email_settings = config.get("email_settings", {})
+    checkpoint_settings = config.get("checkpoint_settings", {})
+
+    checkpoint = load_email_checkpoint(checkpoint_settings)
+    emails = read_recent_filtered_emails(email_settings)
+    emails_to_process, checkpoint_summary = get_emails_to_process(
+        emails,
+        checkpoint,
+        checkpoint_settings,
+    )
+    jobs = parse_emails_to_jobs(emails_to_process)
+    scored_jobs = score_jobs(jobs, config)
+    save_summary = save_new_jobs(scored_jobs)
+    checkpoint_updated = update_email_checkpoint(
+        checkpoint,
+        emails_to_process,
+        checkpoint_settings,
+    )
+
+    return {
+        "correos_leidos": len(emails),
+        "correos_nuevos": len(emails_to_process),
+        "checkpoint_ignorados": checkpoint_summary["ignored"],
+        "ofertas_parseadas": len(jobs),
+        "checkpoint_actualizado": checkpoint_updated,
+        "save_summary": save_summary,
+    }
+
+
+def empty_email_summary():
+    """Crea un resumen vacio de correo cuando IMAP esta desactivado."""
+    return {
+        "correos_leidos": 0,
+        "correos_nuevos": 0,
+        "checkpoint_ignorados": 0,
+        "ofertas_parseadas": 0,
+        "checkpoint_actualizado": False,
+        "save_summary": empty_save_summary(),
+    }
+
+
+def process_ats_sources(config):
+    """Consulta fuentes ATS, filtra, puntua y guarda ofertas nuevas."""
+    settings = config.get("ats_sources", {})
+    summary = {
+        "ats_total": 0,
+        "ats_filtradas_keywords": 0,
+        "ats_excluidas": 0,
+        "ats_score_suficiente": 0,
+        "save_summary": empty_save_summary(),
+    }
+
+    if not settings.get("enabled", False):
+        return summary
+
+    greenhouse_companies = settings.get("greenhouse_companies", [])
+    lever_companies = settings.get("lever_companies", [])
+    keywords = settings.get("keywords", [])
+    exclude_keywords = settings.get("exclude_keywords", [])
+    min_score = get_int_setting(settings, "min_score", 20)
+    scoring_config = build_ats_scoring_config(config, settings)
+
+    jobs = []
+    jobs.extend(fetch_greenhouse_jobs(greenhouse_companies))
+    jobs.extend(fetch_lever_jobs(lever_companies))
+
+    keyword_jobs = filter_jobs_by_keywords(jobs, keywords)
+    target_jobs, excluded_count = filter_jobs_by_exclusions(
+        keyword_jobs,
+        exclude_keywords,
+    )
+    scored_jobs = score_jobs(target_jobs, scoring_config)
+    enough_score_jobs = [
+        job for job in scored_jobs if job.get("score", 0) >= min_score
+    ]
+    save_summary = save_new_jobs(enough_score_jobs)
+
+    summary.update(
+        {
+            "ats_total": len(jobs),
+            "ats_filtradas_keywords": len(keyword_jobs),
+            "ats_excluidas": excluded_count,
+            "ats_score_suficiente": len(enough_score_jobs),
+            "save_summary": save_summary,
+        }
+    )
+    return summary
+
+
 def notify_new_jobs(new_jobs, notification_settings):
     """Notifica ofertas nuevas segun configuracion de canales."""
     summary = {
@@ -224,32 +332,48 @@ def print_next_run(interval_minutes):
 def run_once(config):
     """Ejecuta una pasada completa del worker."""
     email_settings = config.get("email_settings", {})
+    ats_settings = config.get("ats_sources", {})
     notification_settings = config.get("notification_settings", {})
-    checkpoint_settings = config.get("checkpoint_settings", {})
+    email_enabled = email_settings.get("enabled", False)
+    ats_enabled = ats_settings.get("enabled", False)
 
-    if not email_settings.get("enabled", False):
-        LOGGER.info("La lectura de correos esta desactivada en email_settings.enabled.")
+    if not email_enabled and not ats_enabled:
+        LOGGER.info(
+            "Correo y ATS estan desactivados. "
+            "Activa email_settings.enabled o ats_sources.enabled para procesar."
+        )
         return
 
     init_db()
 
-    checkpoint = load_email_checkpoint(checkpoint_settings)
-    emails = read_recent_filtered_emails(email_settings)
-    emails_to_process, checkpoint_summary = get_emails_to_process(
-        emails,
-        checkpoint,
-        checkpoint_settings,
-    )
-    jobs = parse_emails_to_jobs(emails_to_process)
-    scored_jobs = score_jobs(jobs, config)
-    save_summary = save_new_jobs(scored_jobs)
-    checkpoint_updated = update_email_checkpoint(
-        checkpoint,
-        emails_to_process,
-        checkpoint_settings,
+    if email_enabled:
+        try:
+            email_summary = process_email_sources(config)
+        except Exception as exc:
+            LOGGER.exception("Error procesando correos: %s", exc)
+            email_summary = empty_email_summary()
+    else:
+        LOGGER.info("La lectura de correos esta desactivada en email_settings.enabled.")
+        email_summary = empty_email_summary()
+
+    try:
+        ats_summary = process_ats_sources(config)
+    except Exception as exc:
+        LOGGER.exception("Error procesando fuentes ATS: %s", exc)
+        ats_summary = {
+            "ats_total": 0,
+            "ats_filtradas_keywords": 0,
+            "ats_excluidas": 0,
+            "ats_score_suficiente": 0,
+            "save_summary": empty_save_summary(),
+        }
+    email_save_summary = email_summary["save_summary"]
+    ats_save_summary = ats_summary["save_summary"]
+    new_jobs_to_notify = (
+        email_save_summary["new_jobs"] + ats_save_summary["new_jobs"]
     )
     notification_summary = notify_new_jobs(
-        save_summary["new_jobs"],
+        new_jobs_to_notify,
         notification_settings,
     )
 
@@ -257,16 +381,24 @@ def run_once(config):
         "Resumen del ciclo | correos_leidos=%s | correos_nuevos=%s | "
         "checkpoint_ignorados=%s | ofertas_parseadas=%s | nuevas_guardadas=%s | "
         "duplicadas=%s | ignoradas=%s | checkpoint_actualizado=%s | "
+        "ats_total=%s | ats_filtradas_keywords=%s | ats_excluidas=%s | "
+        "ats_score_suficiente=%s | ats_nuevas_guardadas=%s | ats_duplicadas=%s | "
         "notificaciones_candidatas=%s | consola=%s | telegram_enviadas=%s | "
         "telegram_fallidas=%s",
-        len(emails),
-        len(emails_to_process),
-        checkpoint_summary["ignored"],
-        len(jobs),
-        len(save_summary["new_jobs"]),
-        save_summary["duplicates"],
-        save_summary["ignored"],
-        "si" if checkpoint_updated else "no",
+        email_summary["correos_leidos"],
+        email_summary["correos_nuevos"],
+        email_summary["checkpoint_ignorados"],
+        email_summary["ofertas_parseadas"],
+        len(email_save_summary["new_jobs"]),
+        email_save_summary["duplicates"],
+        email_save_summary["ignored"],
+        "si" if email_summary["checkpoint_actualizado"] else "no",
+        ats_summary["ats_total"],
+        ats_summary["ats_filtradas_keywords"],
+        ats_summary["ats_excluidas"],
+        ats_summary["ats_score_suficiente"],
+        len(ats_save_summary["new_jobs"]),
+        ats_save_summary["duplicates"],
         notification_summary["candidates"],
         notification_summary["console"],
         notification_summary["telegram_sent"],

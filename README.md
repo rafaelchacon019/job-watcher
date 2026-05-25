@@ -166,8 +166,12 @@ Greenhouse y Lever. Esta prueba no toca LinkedIn ni Computrabajo directo, no
 guarda en SQLite y no envia Telegram.
 
 La Fase 4.2 aplica filtros por keywords, exclusiones y scoring con
-`calculate_score()` para ordenar mejor los resultados ATS. Sigue siendo una
-prueba manual: no guarda en SQLite, no notifica y no se integra al worker.
+`calculate_score()` para ordenar mejor los resultados ATS en la prueba manual.
+
+La Fase 4.3 permite que el worker tambien consulte ATS cuando
+`ats_sources.enabled` esta en `true`. En ese modo guarda solo ofertas nuevas,
+usa el link para evitar duplicados y notifica solo las nuevas ofertas que pasen
+los filtros de notificacion.
 
 Para probar mas adelante, configura empresas en `ats_sources` y ejecuta:
 
