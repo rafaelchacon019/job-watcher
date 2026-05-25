@@ -71,6 +71,7 @@ email_settings:
 ats_sources:
   enabled: false
   max_results: 10
+  min_score: 20
   keywords:
     - software
     - engineer
@@ -80,6 +81,36 @@ ats_sources:
     - full stack
     - data
     - junior
+  exclude_keywords:
+    - sales
+    - marketing
+    - legal
+    - recruiter
+    - talent acquisition
+    - principal
+    - staff
+    - director
+    - manager
+    - security
+    - ai research
+    - machine learning
+    - data scientist
+    - counsel
+    - legal counsel
+    - solutions engineer
+    - technical solutions
+    - support engineer
+    - customer engineer
+    - customer success
+    - account executive
+    - product manager
+    - product counsel
+  preferred_locations:
+    - remote
+    - latam
+    - colombia
+    - bogotá
+    - bogota
   greenhouse_companies: []
   lever_companies: []
 

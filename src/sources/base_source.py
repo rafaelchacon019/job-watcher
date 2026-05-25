@@ -9,6 +9,7 @@ STANDARD_JOB_FIELDS = [
     "description",
     "link",
     "source_type",
+    "email_type",
 ]
 
 
@@ -21,6 +22,7 @@ def normalize_job(
     description="",
     link="",
     source_type="",
+    email_type="job_alert",
 ):
     """Crea una oferta con el formato estandar del proyecto."""
     return {
@@ -32,6 +34,7 @@ def normalize_job(
         "description": str(description or "").strip(),
         "link": str(link or "").strip(),
         "source_type": str(source_type or "").strip() or "ats",
+        "email_type": str(email_type or "").strip() or "job_alert",
     }
 
 

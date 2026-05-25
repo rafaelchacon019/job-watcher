@@ -165,6 +165,10 @@ La Fase 4.1 agrega una base manual para consultar fuentes ATS publicas como
 Greenhouse y Lever. Esta prueba no toca LinkedIn ni Computrabajo directo, no
 guarda en SQLite y no envia Telegram.
 
+La Fase 4.2 aplica filtros por keywords, exclusiones y scoring con
+`calculate_score()` para ordenar mejor los resultados ATS. Sigue siendo una
+prueba manual: no guarda en SQLite, no notifica y no se integra al worker.
+
 Para probar mas adelante, configura empresas en `ats_sources` y ejecuta:
 
 ```powershell
