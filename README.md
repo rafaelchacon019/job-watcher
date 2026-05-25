@@ -230,6 +230,10 @@ scripts/start_worker.bat
 
 Para detener el worker usa `Ctrl + C`.
 
+## Uso Diario
+
+La guia practica para uso diario esta en [docs/USO_DIARIO.md](docs/USO_DIARIO.md).
+
 ## Instalacion local
 
 Crear el entorno virtual:
