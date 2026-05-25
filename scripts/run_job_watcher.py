@@ -7,6 +7,7 @@ No genera CSV.
 
 import sys
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -187,6 +188,34 @@ def notify_new_jobs(new_jobs, notification_settings):
     return summary
 
 
+def current_time_label():
+    """Devuelve la hora local en formato legible para consola."""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_interval_minutes(worker_settings):
+    """Obtiene un intervalo valido para el modo continuo."""
+    default_interval = 5
+
+    try:
+        interval_minutes = int(worker_settings.get("interval_minutes", default_interval))
+    except (TypeError, ValueError):
+        print("Intervalo invalido. Se usaran 5 minutos por defecto.")
+        return default_interval
+
+    if interval_minutes <= 0:
+        print("Intervalo menor o igual a 0. Se usaran 5 minutos por defecto.")
+        return default_interval
+
+    return interval_minutes
+
+
+def print_next_run(interval_minutes):
+    """Muestra la hora aproximada de la siguiente ejecucion."""
+    next_run_at = datetime.now() + timedelta(minutes=interval_minutes)
+    print(f"Proxima ejecucion: {next_run_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+
 def run_once(config):
     """Ejecuta una pasada completa del worker."""
     email_settings = config.get("email_settings", {})
@@ -245,12 +274,12 @@ def run_worker():
         )
         return
 
-    interval_minutes = worker_settings.get("interval_minutes", 5)
+    interval_minutes = get_interval_minutes(worker_settings)
     run_once_enabled = worker_settings.get("run_once", True)
 
     while True:
         try:
-            print("Ejecutando worker local de job-watcher...")
+            print(f"Iniciando ciclo del worker: {current_time_label()}")
             run_once(config)
         except Exception as exc:
             # El worker no debe caer por un fallo puntual de correo o red.
@@ -259,11 +288,16 @@ def run_worker():
         if run_once_enabled:
             return
 
-        print(f"Proxima ejecucion en {interval_minutes} minutos.")
-        time.sleep(int(interval_minutes) * 60)
-        config = load_config()
-        worker_settings = config.get("worker_settings", {})
-        interval_minutes = worker_settings.get("interval_minutes", interval_minutes)
+        print_next_run(interval_minutes)
+        time.sleep(interval_minutes * 60)
+
+        try:
+            config = load_config()
+            worker_settings = config.get("worker_settings", {})
+            interval_minutes = get_interval_minutes(worker_settings)
+            run_once_enabled = worker_settings.get("run_once", run_once_enabled)
+        except Exception as exc:
+            print(f"No se pudo recargar config.yaml: {exc}")
 
 
 if __name__ == "__main__":

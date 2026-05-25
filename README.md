@@ -193,6 +193,17 @@ el worker ignore correos ya procesados. El archivo queda ignorado por Git y
 guarda la ultima ejecucion junto con una lista limitada de `message_id`
 procesados.
 
+## Fase 3.3
+
+La Fase 3.3 mejora el modo continuo del worker. Para probarlo, activa
+`worker_settings.enabled`, deja `worker_settings.run_once` en `false` y ejecuta
+el script. El worker repetira el ciclo cada `worker_settings.interval_minutes`
+y se puede detener con `Ctrl + C`.
+
+```powershell
+python scripts/run_job_watcher.py
+```
+
 ## Instalacion local
 
 Crear el entorno virtual:
