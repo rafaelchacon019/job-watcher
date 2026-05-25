@@ -33,6 +33,7 @@ evitar reprocesar correos ya revisados.
 - requests
 - Telegram Bot API
 - logging estandar de Python
+- Endpoints publicos ATS tipo Greenhouse y Lever
 
 ## Estructura Principal
 
@@ -59,7 +60,8 @@ job-watcher/
 |   |-- database.py
 |   |-- notifier.py
 |   |-- email_checkpoint.py
-|   `-- logger.py
+|   |-- logger.py
+|   `-- sources/
 |-- data/
 |-- output/
 |-- logs/
@@ -79,6 +81,7 @@ job-watcher/
 - `src/notifier.py`: notificaciones por consola y Telegram.
 - `src/email_checkpoint.py`: checkpoint de correos procesados.
 - `src/logger.py`: logs persistentes del worker.
+- `src/sources/`: fuentes ATS publicas permitidas.
 
 ## Inicio Rapido
 
@@ -156,6 +159,18 @@ La guia practica de operacion diaria esta en
 - [x] Ejecucion continua estable
 - [x] Scripts de arranque para Windows
 
+## Fase 4.1
+
+La Fase 4.1 agrega una base manual para consultar fuentes ATS publicas como
+Greenhouse y Lever. Esta prueba no toca LinkedIn ni Computrabajo directo, no
+guarda en SQLite y no envia Telegram.
+
+Para probar mas adelante, configura empresas en `ats_sources` y ejecuta:
+
+```powershell
+python scripts/test_ats_sources.py
+```
+
 ## Archivos Locales Ignorados
 
 Estos archivos son locales y no deben subirse a Git:
@@ -170,7 +185,7 @@ Estos archivos son locales y no deben subirse a Git:
 
 ## Roadmap Resumido
 
-- Agregar nuevas fuentes compatibles sin scraping ni login automatizado.
+- Ampliar fuentes compatibles sin scraping ni login automatizado.
 - Incorporar IA/OpenAI para analisis mas inteligente de ofertas.
 - Mejorar scoring con pesos configurables y aprendizaje manual.
 - Detectar mejor seniority, salario, modalidad y tecnologias en textos reales.

@@ -66,6 +66,23 @@ email_settings:
     - promoción
     - newsletter
 
+# Fuentes ATS publicas permitidas.
+# En Fase 4.1 queda apagado y solo se prueba manualmente.
+ats_sources:
+  enabled: false
+  max_results: 10
+  keywords:
+    - software
+    - engineer
+    - developer
+    - backend
+    - frontend
+    - full stack
+    - data
+    - junior
+  greenhouse_companies: []
+  lever_companies: []
+
 portales_objetivo:
   - LinkedIn
   - Computrabajo
