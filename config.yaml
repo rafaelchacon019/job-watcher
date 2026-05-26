@@ -20,14 +20,15 @@ logging_settings:
   level: INFO
 
 # Analisis IA opcional sobre ofertas ya priorizadas.
-# En Fase 5.1 queda apagado y solo se prueba manualmente.
+# En Fase 5.2 queda apagado y solo se usa en Telegram si se activa.
 ai_settings:
   enabled: false
   provider: openai
   model: gpt-4.1-mini
   max_jobs_per_cycle: 3
-  min_score: 20
+  min_score: 25
   include_raw_description: false
+  use_in_telegram: false
 
 # Checkpoint local para no reprocesar los mismos correos.
 checkpoint_settings:

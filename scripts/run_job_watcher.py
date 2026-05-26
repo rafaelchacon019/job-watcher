@@ -20,6 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.database import init_db, job_exists_by_fingerprint, save_job_if_not_exists
 from src.deduplication import build_job_fingerprint
+from src.ai_analyzer import analyze_jobs_batch
 from src.email_checkpoint import (
     filter_unprocessed_emails,
     load_checkpoint,
@@ -277,11 +278,41 @@ def process_ats_sources(config):
     return summary
 
 
-def notify_new_jobs(new_jobs, notification_settings):
+def attach_ai_analysis_for_telegram(jobs_to_notify, config, telegram_enabled):
+    """Agrega analisis IA solo a ofertas nuevas que se enviaran por Telegram."""
+    ai_settings = config.get("ai_settings", {})
+
+    if not telegram_enabled:
+        return 0
+
+    if not ai_settings.get("enabled", False):
+        return 0
+
+    if not ai_settings.get("use_in_telegram", False):
+        return 0
+
+    if not jobs_to_notify:
+        return 0
+
+    try:
+        results = analyze_jobs_batch(jobs_to_notify, config)
+    except Exception as exc:
+        # La IA es opcional: si falla, Telegram se envia con el formato normal.
+        LOGGER.warning("No se pudo agregar analisis IA a Telegram: %s", exc)
+        return 0
+
+    for result in results:
+        result["job"]["ai_analysis"] = result.get("analysis", {})
+
+    return len(results)
+
+
+def notify_new_jobs(new_jobs, notification_settings, config):
     """Notifica ofertas nuevas segun configuracion de canales."""
     summary = {
         "candidates": 0,
         "console": 0,
+        "ai_analyzed": 0,
         "telegram_sent": 0,
         "telegram_failed": 0,
     }
@@ -301,6 +332,11 @@ def notify_new_jobs(new_jobs, notification_settings):
         summary["console"] = len(jobs_to_notify)
 
     if telegram_enabled:
+        summary["ai_analyzed"] = attach_ai_analysis_for_telegram(
+            jobs_to_notify,
+            config,
+            telegram_enabled,
+        )
         try:
             telegram_summary = send_telegram_notifications(jobs_to_notify)
             summary["telegram_sent"] = telegram_summary["enviados"]
@@ -386,6 +422,7 @@ def run_once(config):
     notification_summary = notify_new_jobs(
         new_jobs_to_notify,
         notification_settings,
+        config,
     )
 
     LOGGER.info(
@@ -395,7 +432,7 @@ def run_once(config):
         "ats_total=%s | ats_filtradas_keywords=%s | ats_excluidas=%s | "
         "ats_score_suficiente=%s | ats_nuevas_guardadas=%s | ats_duplicadas=%s | "
         "duplicadas_por_fingerprint=%s | ats_duplicadas_por_fingerprint=%s | "
-        "notificaciones_candidatas=%s | consola=%s | telegram_enviadas=%s | "
+        "notificaciones_candidatas=%s | consola=%s | ia_analizadas=%s | telegram_enviadas=%s | "
         "telegram_fallidas=%s",
         email_summary["correos_leidos"],
         email_summary["correos_nuevos"],
@@ -415,6 +452,7 @@ def run_once(config):
         ats_save_summary["duplicates_by_fingerprint"],
         notification_summary["candidates"],
         notification_summary["console"],
+        notification_summary["ai_analyzed"],
         notification_summary["telegram_sent"],
         notification_summary["telegram_failed"],
     )

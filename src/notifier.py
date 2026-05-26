@@ -65,6 +65,7 @@ def format_job_notification(job):
     """Crea un texto legible para mostrar una oferta prioritaria."""
     reasons = job.get("reasons", [])[:5]
     reason_lines = "\n".join(f"- {reason}" for reason in reasons)
+    ai_section = _format_ai_analysis(job.get("ai_analysis"))
 
     if not reason_lines:
         reason_lines = "- Sin motivos registrados"
@@ -79,7 +80,26 @@ def format_job_notification(job):
         f"Modalidad: {job.get('modality', '')}\n"
         "Motivos:\n"
         f"{reason_lines}\n"
+        f"{ai_section}"
         f"Link: {job.get('link', '')}"
+    )
+
+
+def _format_ai_analysis(analysis):
+    """Formatea un resumen IA compacto si la oferta lo trae."""
+    if not analysis:
+        return ""
+
+    stack = ", ".join(analysis.get("detected_stack", [])[:5])
+    red_flags = ", ".join(analysis.get("red_flags", [])[:3])
+
+    return (
+        "Analisis IA:\n"
+        f"- Compatibilidad: {analysis.get('match_level', 'No detectada')}\n"
+        f"- Seniority estimado: {analysis.get('estimated_seniority', 'No detectado')}\n"
+        f"- Stack detectado: {stack or 'No detectado'}\n"
+        f"- Riesgos: {red_flags or 'Sin riesgos detectados'}\n"
+        f"- Recomendacion: {analysis.get('recommendation', 'Revisar manualmente')}\n"
     )
 
 

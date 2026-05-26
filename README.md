@@ -210,6 +210,34 @@ python scripts/test_ai_analysis.py
 El script no guarda resultados en SQLite, no envia Telegram y no modifica el
 worker.
 
+## Fase 5.2
+
+La Fase 5.2 permite agregar un resumen IA compacto a las notificaciones de
+Telegram del worker. Esta capa sigue siendo opcional: si OpenAI esta apagado,
+no esta configurado o falla, el worker continua enviando Telegram normal.
+
+Para probarla:
+
+1. Agrega `OPENAI_API_KEY` en tu `.env` local.
+2. Activa temporalmente:
+
+```yaml
+ai_settings:
+  enabled: true
+  use_in_telegram: true
+  max_jobs_per_cycle: 3
+```
+
+3. Ejecuta el worker como siempre:
+
+```powershell
+python scripts/run_job_watcher.py
+```
+
+Mantener `max_jobs_per_cycle` bajo ayuda a controlar costos. Al terminar la
+prueba, vuelve a dejar `ai_settings.enabled` y `ai_settings.use_in_telegram` en
+`false` si no lo vas a usar todavia.
+
 ## Archivos Locales Ignorados
 
 Estos archivos son locales y no deben subirse a Git:

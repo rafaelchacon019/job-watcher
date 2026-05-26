@@ -42,6 +42,8 @@ EMAIL_USE_SSL=true
 
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
+
+OPENAI_API_KEY=
 ```
 
 Notas:
@@ -49,6 +51,7 @@ Notas:
   equivalente, no una contrasena personal escrita en el repositorio.
 - `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` solo se necesitan si vas a enviar
   notificaciones por Telegram.
+- `OPENAI_API_KEY` solo se necesita si vas a probar analisis IA.
 
 ## Revisar config.yaml
 
@@ -187,6 +190,30 @@ python scripts/notify_saved_jobs.py
 
 Si solo quieres probar notificaciones guardadas, este script no lee correos ni
 usa IMAP.
+
+## Usar IA En Telegram
+
+La IA en Telegram es opcional y solo analiza ofertas nuevas que ya pasaron los
+filtros de notificacion.
+
+1. Guarda `OPENAI_API_KEY` en `.env`.
+2. Activa temporalmente:
+
+```yaml
+ai_settings:
+  enabled: true
+  use_in_telegram: true
+  max_jobs_per_cycle: 3
+```
+
+3. Ejecuta el worker:
+
+```powershell
+python scripts/run_job_watcher.py
+```
+
+Para controlar costos, deja `max_jobs_per_cycle` bajo. Si OpenAI falla, el
+worker debe seguir enviando la notificacion normal sin analisis IA.
 
 ## Cómo Agregar Empresas ATS
 

@@ -151,14 +151,38 @@ def _parse_analysis(text):
     """Convierte JSON de la IA al formato esperado."""
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("La respuesta de OpenAI no fue JSON valido.") from exc
+    except json.JSONDecodeError:
+        analysis = dict(DEFAULT_ANALYSIS)
+        analysis["red_flags"] = ["Respuesta IA no interpretable"]
+        analysis["recommendation"] = (
+            "Revisar manualmente: OpenAI no devolvio JSON valido."
+        )
+        return analysis
+
+    if not isinstance(data, dict):
+        analysis = dict(DEFAULT_ANALYSIS)
+        analysis["red_flags"] = ["Respuesta IA con formato inesperado"]
+        analysis["recommendation"] = (
+            "Revisar manualmente: OpenAI no devolvio un objeto JSON."
+        )
+        return analysis
 
     analysis = dict(DEFAULT_ANALYSIS)
     analysis.update(data)
-    analysis["detected_stack"] = list(analysis.get("detected_stack") or [])
-    analysis["red_flags"] = list(analysis.get("red_flags") or [])
+    analysis["detected_stack"] = _ensure_list(analysis.get("detected_stack"))
+    analysis["red_flags"] = _ensure_list(analysis.get("red_flags"))
     return analysis
+
+
+def _ensure_list(value):
+    """Normaliza campos que deben ser listas para evitar formatos raros."""
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        return [str(item) for item in value]
+
+    return [str(value)]
 
 
 def analyze_job_with_openai(job, config):
@@ -203,7 +227,12 @@ def analyze_job_with_openai(job, config):
 
     output_text = _extract_output_text(response_data)
     if not output_text:
-        raise RuntimeError("OpenAI no devolvio texto de analisis.")
+        analysis = dict(DEFAULT_ANALYSIS)
+        analysis["red_flags"] = ["Respuesta IA vacia"]
+        analysis["recommendation"] = (
+            "Revisar manualmente: OpenAI no devolvio texto de analisis."
+        )
+        return analysis
 
     return _parse_analysis(output_text)
 
