@@ -14,12 +14,15 @@ OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 
 DEFAULT_ANALYSIS = {
     "summary": "",
-    "match_level": "",
+    "fit_level": "bajo",
+    "fit_score": 0,
     "estimated_seniority": "",
     "detected_stack": [],
-    "work_modality": "",
+    "positive_signals": [],
     "red_flags": [],
+    "missing_info": [],
     "recommendation": "",
+    "apply_priority": "baja",
 }
 
 
@@ -28,27 +31,49 @@ ANALYSIS_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "summary": {"type": "string"},
-        "match_level": {"type": "string"},
+        "fit_level": {
+            "type": "string",
+            "enum": ["alto", "medio", "bajo"],
+        },
+        "fit_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+        },
         "estimated_seniority": {"type": "string"},
         "detected_stack": {
             "type": "array",
             "items": {"type": "string"},
         },
-        "work_modality": {"type": "string"},
+        "positive_signals": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
         "red_flags": {
             "type": "array",
             "items": {"type": "string"},
         },
+        "missing_info": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
         "recommendation": {"type": "string"},
+        "apply_priority": {
+            "type": "string",
+            "enum": ["alta", "media", "baja"],
+        },
     },
     "required": [
         "summary",
-        "match_level",
+        "fit_level",
+        "fit_score",
         "estimated_seniority",
         "detected_stack",
-        "work_modality",
+        "positive_signals",
         "red_flags",
+        "missing_info",
         "recommendation",
+        "apply_priority",
     ],
 }
 
@@ -94,6 +119,15 @@ def build_job_analysis_prompt(job, config):
         "No inventes datos que no aparezcan en la oferta.",
         "No escribas CV, no generes postulaciones y no automatices acciones.",
         "",
+        "Perfil objetivo:",
+        "- Desarrollador Junior o Semi Senior.",
+        "- Stack fuerte: Angular, TypeScript, JavaScript, .NET, C#, ASP.NET Core.",
+        "- Tambien valen Node.js, SQL Server, PostgreSQL, API REST, JWT y Git.",
+        "- Python y PL/SQL solo son alta compatibilidad si el rol es Junior, Entry Level o Trainee.",
+        "- Evitar Senior, Lead, Architect y Manager.",
+        "- Evitar roles no dev como Sales, Marketing, Legal, Recruiter o Product Manager.",
+        "- Evitar AI/ML, Data Scientist, DevOps y Security salvo que sea muy junior y compatible.",
+        "",
         f"Titulo: {job.get('title', '')}",
         f"Empresa: {job.get('company', '')}",
         f"Portal: {job.get('portal', '')}",
@@ -119,12 +153,15 @@ def build_job_analysis_prompt(job, config):
             "",
             "Devuelve solo JSON con:",
             "- summary",
-            "- match_level",
+            "- fit_level: alto, medio o bajo",
+            "- fit_score: entero de 0 a 100",
             "- estimated_seniority",
             "- detected_stack",
-            "- work_modality",
+            "- positive_signals",
             "- red_flags",
+            "- missing_info",
             "- recommendation",
+            "- apply_priority: alta, media o baja",
         ]
     )
 
@@ -152,26 +189,18 @@ def _parse_analysis(text):
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        analysis = dict(DEFAULT_ANALYSIS)
-        analysis["red_flags"] = ["Respuesta IA no interpretable"]
-        analysis["recommendation"] = (
-            "Revisar manualmente: OpenAI no devolvio JSON valido."
+        return _fallback_analysis(
+            "Respuesta IA no interpretable",
+            "Revisar manualmente: OpenAI no devolvio JSON valido.",
         )
-        return analysis
 
     if not isinstance(data, dict):
-        analysis = dict(DEFAULT_ANALYSIS)
-        analysis["red_flags"] = ["Respuesta IA con formato inesperado"]
-        analysis["recommendation"] = (
-            "Revisar manualmente: OpenAI no devolvio un objeto JSON."
+        return _fallback_analysis(
+            "Respuesta IA con formato inesperado",
+            "Revisar manualmente: OpenAI no devolvio un objeto JSON.",
         )
-        return analysis
 
-    analysis = dict(DEFAULT_ANALYSIS)
-    analysis.update(data)
-    analysis["detected_stack"] = _ensure_list(analysis.get("detected_stack"))
-    analysis["red_flags"] = _ensure_list(analysis.get("red_flags"))
-    return analysis
+    return _normalize_analysis(data)
 
 
 def _ensure_list(value):
@@ -183,6 +212,61 @@ def _ensure_list(value):
         return [str(item) for item in value]
 
     return [str(value)]
+
+
+def _normalize_enum(value, allowed_values, default):
+    """Garantiza que un texto quede dentro de valores esperados."""
+    normalized = str(value or "").strip().lower()
+    if normalized in allowed_values:
+        return normalized
+
+    return default
+
+
+def _normalize_fit_score(value):
+    """Convierte fit_score a entero entre 0 y 100."""
+    try:
+        score = int(value)
+    except (TypeError, ValueError):
+        return 0
+
+    return max(0, min(score, 100))
+
+
+def _normalize_analysis(data):
+    """Completa y valida el contrato estructurado del analisis IA."""
+    analysis = dict(DEFAULT_ANALYSIS)
+    analysis.update(data)
+    analysis["summary"] = str(analysis.get("summary", "") or "")
+    analysis["fit_level"] = _normalize_enum(
+        analysis.get("fit_level"),
+        ["alto", "medio", "bajo"],
+        "bajo",
+    )
+    analysis["fit_score"] = _normalize_fit_score(analysis.get("fit_score"))
+    analysis["estimated_seniority"] = str(
+        analysis.get("estimated_seniority", "") or ""
+    )
+    analysis["detected_stack"] = _ensure_list(analysis.get("detected_stack"))
+    analysis["positive_signals"] = _ensure_list(analysis.get("positive_signals"))
+    analysis["red_flags"] = _ensure_list(analysis.get("red_flags"))
+    analysis["missing_info"] = _ensure_list(analysis.get("missing_info"))
+    analysis["recommendation"] = str(analysis.get("recommendation", "") or "")
+    analysis["apply_priority"] = _normalize_enum(
+        analysis.get("apply_priority"),
+        ["alta", "media", "baja"],
+        "baja",
+    )
+    return analysis
+
+
+def _fallback_analysis(red_flag, recommendation):
+    """Devuelve un analisis seguro cuando la IA no responde como esperamos."""
+    analysis = dict(DEFAULT_ANALYSIS)
+    analysis["red_flags"] = [red_flag]
+    analysis["missing_info"] = ["Analisis IA estructurado no disponible"]
+    analysis["recommendation"] = recommendation
+    return analysis
 
 
 def analyze_job_with_openai(job, config):
@@ -227,12 +311,10 @@ def analyze_job_with_openai(job, config):
 
     output_text = _extract_output_text(response_data)
     if not output_text:
-        analysis = dict(DEFAULT_ANALYSIS)
-        analysis["red_flags"] = ["Respuesta IA vacia"]
-        analysis["recommendation"] = (
-            "Revisar manualmente: OpenAI no devolvio texto de analisis."
+        return _fallback_analysis(
+            "Respuesta IA vacia",
+            "Revisar manualmente: OpenAI no devolvio texto de analisis.",
         )
-        return analysis
 
     return _parse_analysis(output_text)
 

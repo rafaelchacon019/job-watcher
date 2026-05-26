@@ -20,7 +20,7 @@ logging_settings:
   level: INFO
 
 # Analisis IA opcional sobre ofertas ya priorizadas.
-# En Fase 5.2 queda apagado y solo se usa en Telegram si se activa.
+# En Fase 5.3 queda apagado y solo se usa si se activa manualmente.
 ai_settings:
   enabled: false
   provider: openai

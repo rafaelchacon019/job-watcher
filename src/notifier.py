@@ -91,13 +91,18 @@ def _format_ai_analysis(analysis):
         return ""
 
     stack = ", ".join(analysis.get("detected_stack", [])[:5])
+    positive_signals = ", ".join(analysis.get("positive_signals", [])[:3])
     red_flags = ", ".join(analysis.get("red_flags", [])[:3])
+    fit_level = analysis.get("fit_level") or analysis.get("match_level", "")
+    fit_score = analysis.get("fit_score", 0)
 
     return (
         "Analisis IA:\n"
-        f"- Compatibilidad: {analysis.get('match_level', 'No detectada')}\n"
-        f"- Seniority estimado: {analysis.get('estimated_seniority', 'No detectado')}\n"
+        f"- Compatibilidad: {fit_level or 'No detectada'} ({fit_score}/100)\n"
+        f"- Prioridad: {analysis.get('apply_priority', 'baja')}\n"
+        f"- Seniority: {analysis.get('estimated_seniority', 'No detectado')}\n"
         f"- Stack detectado: {stack or 'No detectado'}\n"
+        f"- Senales positivas: {positive_signals or 'Sin senales claras'}\n"
         f"- Riesgos: {red_flags or 'Sin riesgos detectados'}\n"
         f"- Recomendacion: {analysis.get('recommendation', 'Revisar manualmente')}\n"
     )

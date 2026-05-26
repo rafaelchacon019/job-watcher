@@ -238,6 +238,18 @@ Mantener `max_jobs_per_cycle` bajo ayuda a controlar costos. Al terminar la
 prueba, vuelve a dejar `ai_settings.enabled` y `ai_settings.use_in_telegram` en
 `false` si no lo vas a usar todavia.
 
+## Fase 5.3
+
+La Fase 5.3 mejora el analisis IA para devolver un formato mas consistente:
+resumen, compatibilidad, puntaje IA, seniority estimado, stack detectado,
+senales positivas, riesgos, informacion faltante, recomendacion y prioridad de
+postulacion.
+
+El prompt usa el perfil objetivo del proyecto y mantiene reglas conservadoras:
+prioriza roles Junior/Semi Senior de desarrollo web y backend, trata Python y
+PL/SQL como tecnologias condicionales por nivel, y baja prioridad a roles Senior,
+Lead, Manager, AI/ML, Data Scientist, DevOps, Security o areas no dev.
+
 ## Archivos Locales Ignorados
 
 Estos archivos son locales y no deben subirse a Git:

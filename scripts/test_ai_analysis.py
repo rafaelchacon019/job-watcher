@@ -57,11 +57,19 @@ def print_analysis_result(result, index):
     print(f"   Company: {job.get('company', '')}")
     print(f"   Portal: {job.get('portal', '')}")
     print(f"   Resumen IA: {analysis.get('summary', '')}")
-    print(f"   Compatibilidad: {analysis.get('match_level', '')}")
+    print(
+        "   Compatibilidad: "
+        f"{analysis.get('fit_level', '')} ({analysis.get('fit_score', 0)}/100)"
+    )
+    print(f"   Prioridad de postulacion: {analysis.get('apply_priority', '')}")
     print(f"   Seniority estimado: {analysis.get('estimated_seniority', '')}")
     print(f"   Stack detectado: {', '.join(analysis.get('detected_stack', []))}")
-    print(f"   Modalidad IA: {analysis.get('work_modality', '')}")
+    print(
+        "   Senales positivas: "
+        f"{', '.join(analysis.get('positive_signals', []))}"
+    )
     print(f"   Riesgos: {', '.join(analysis.get('red_flags', []))}")
+    print(f"   Informacion faltante: {', '.join(analysis.get('missing_info', []))}")
     print(f"   Recomendacion: {analysis.get('recommendation', '')}")
     print(f"   Link: {job.get('link', '')}")
 

@@ -215,6 +215,11 @@ python scripts/run_job_watcher.py
 Para controlar costos, deja `max_jobs_per_cycle` bajo. Si OpenAI falla, el
 worker debe seguir enviando la notificacion normal sin analisis IA.
 
+El analisis IA muestra campos estructurados: compatibilidad, prioridad,
+seniority estimado, stack detectado, senales positivas, riesgos,
+informacion faltante y recomendacion. Es una ayuda para priorizar, no reemplaza
+tu revision manual.
+
 ## Cómo Agregar Empresas ATS
 
 Las fuentes ATS usan un `slug`, que es el identificador corto de la empresa en
